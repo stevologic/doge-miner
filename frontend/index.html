@@ -1,0 +1,1696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DOGE MINER • full-stack real miner • CPU + GPU</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&amp;display=swap');
+
+    :root {
+      --doge-yellow: #f0b90b;
+      --doge-orange: #ff9f1c;
+    }
+
+    body {
+      background: #0a0a0f;
+      color: #e2e8f0;
+    }
+
+    .doge-gradient {
+      background: linear-gradient(135deg, #f0b90b 0%, #ff9f1c 50%, #f0b90b 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .retro {
+      font-family: "Press Start 2P", system-ui;
+      letter-spacing: 1px;
+    }
+
+    .stat-value {
+      font-variant-numeric: tabular-nums;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    .mining-panel {
+      background: #111114;
+      border: 1px solid #2a2a33;
+    }
+
+    .nerd-box {
+      background: #0c0c0f;
+      border: 1px solid #1f1f26;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    .doge-log {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 13px;
+      line-height: 1.3;
+    }
+
+    .log-line {
+      padding: 1px 0;
+      border-left: 2px solid transparent;
+    }
+
+    .log-line.accepted { border-left-color: #22c55e; color: #86efac; }
+    .log-line.rejected { border-left-color: #ef4444; color: #fca5a5; }
+    .log-line.block { border-left-color: #f0b90b; color: #fde047; font-weight: 700; }
+    .log-line.info { border-left-color: #64748b; }
+    .log-line.wow { border-left-color: #a78bfa; color: #c4b5fd; }
+    .log-line.backend { border-left-color: #475569; color: #94a3b8; font-style: italic; }
+
+    .stat-card {
+      background: #111114;
+      border: 1px solid #2a2a33;
+      transition: transform 0.1s ease, border-color 0.1s ease;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-1px);
+      border-color: #3f3f4a;
+    }
+
+    .big-number {
+      line-height: 1.05;
+      font-weight: 700;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    .doge-text { color: #f0b90b; }
+
+    .hashrate {
+      line-height: 1;
+      font-weight: 800;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    .chart-container {
+      position: relative;
+      height: 90px;
+      width: 100%;
+      max-width: 100%;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+
+    .chart-container canvas {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+      border: 1px solid #2a2a33;
+    }
+
+    canvas { image-rendering: crisp-edges; }
+
+    .terminal-header {
+      background: #1a1a20;
+      border-bottom: 1px solid #2a2a33;
+    }
+
+    .share-bar { transition: width 0.2s cubic-bezier(0.23, 1, 0.32, 1); }
+
+    .nerd-label {
+      color: #64748b;
+      font-size: 10px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .doge-btn { transition: all 0.1s ease; }
+    .doge-btn:active { transform: scale(0.96); }
+
+    .fun-toast { animation: toast-pop 0.25s ease forwards; }
+
+    @keyframes toast-pop {
+      from { transform: translateY(12px) scale(0.9); opacity: 0; }
+      to { transform: translateY(0) scale(1); opacity: 1; }
+    }
+
+    .hash-dots { display: flex; gap: 2px; }
+
+    .hash-dot {
+      width: 4px;
+      height: 4px;
+      background: #f0b90b;
+      border-radius: 50%;
+      animation: hash-flicker 900ms linear infinite;
+      opacity: 0.3;
+    }
+
+    .hash-dot:nth-child(2) { animation-delay: 140ms; }
+    .hash-dot:nth-child(3) { animation-delay: 290ms; }
+
+    .scrypt-visual { font-size: 10px; letter-spacing: 2px; }
+
+    .chain-chip {
+      background: #0c0c0f;
+      border: 1px solid #1f1f26;
+      border-radius: 0.75rem;
+      padding: 0.5rem 0.75rem;
+    }
+
+    select.doge-select, input.doge-input {
+      background: #1f1f26;
+      border: 1px solid #3f3f4a;
+      border-radius: 0.5rem;
+      color: #fff;
+      font-size: 12px;
+      padding: 4px 8px;
+    }
+
+    table.chain-table td, table.chain-table th {
+      padding: 3px 8px;
+      font-family: ui-monospace, Menlo, Consolas, monospace;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+    table.chain-table tr { border-bottom: 1px solid #1a1a20; }
+  </style>
+</head>
+<body class="bg-[#0a0a0f] text-slate-200">
+  <!-- TOP BAR -->
+  <div class="border-b border-[#1f1f26] bg-[#0f0f13]">
+    <div class="max-w-[1200px] mx-auto px-4 sm:px-6 py-2 sm:py-3 flex flex-wrap sm:items-center justify-between gap-y-1">
+      <div class="flex items-center gap-x-3">
+        <div class="flex items-center gap-x-2">
+          <div class="w-9 h-9 bg-[#f0b90b] rounded-xl flex items-center justify-center shadow-inner">
+            <span class="text-[#0a0a0f] text-3xl leading-none mt-0.5">Ð</span>
+          </div>
+          <div>
+            <span class="retro text-xl sm:text-2xl font-bold tracking-[1.5px] text-[#f0b90b]">DOGE</span>
+            <span class="retro text-xl sm:text-2xl font-bold tracking-[1.5px]">MINER</span>
+          </div>
+        </div>
+        <div class="px-3 py-1 rounded bg-[#1a1a20] text-xs font-mono border border-[#2a2a33] flex items-center gap-x-1.5">
+          <div class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+          <span class="text-emerald-400 text-[10px] tracking-widest">v2.0</span>
+        </div>
+        <div class="text-[10px] px-2 py-px rounded bg-[#1f1f26] text-[#f0b90b]/70">FULL-STACK • REAL POOL MINER • CPU + OPENCL GPU</div>
+      </div>
+      <div class="flex items-center gap-x-4 text-xs">
+        <div class="flex items-center gap-x-2 text-[#f0b90b]">
+          <span>🚀</span>
+          <span class="font-mono">TO THE MOON</span>
+        </div>
+        <div class="chain-chip flex items-center gap-x-2 text-[11px] font-mono" title="Live DOGE price (CoinGecko/Blockchair, cached backend-side)">
+          <span class="text-slate-500">DOGE</span>
+          <span>$<span id="top-price">—</span></span>
+          <span id="top-price-change" class="text-emerald-400"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-[1200px] mx-auto px-4 sm:px-6 pt-6 sm:pt-8 pb-12 sm:pb-16">
+
+    <!-- HERO -->
+    <div class="flex items-end justify-between mb-6">
+      <div>
+        <div class="flex items-center gap-x-3">
+          <h1 class="text-4xl sm:text-5xl md:text-6xl font-black tracking-tighter">MUCH<span class="text-[#f0b90b]">WOW</span></h1>
+          <div class="shiba text-4xl sm:text-5xl md:text-6xl">
+            <svg width="1em" height="1em" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle;">
+              <circle cx="50" cy="55" r="38" fill="#f0b90b"/>
+              <polygon points="18,22 32,3 42,28" fill="#e67e22"/>
+              <polygon points="82,22 68,3 58,28" fill="#e67e22"/>
+              <polygon points="23,24 31,12 38,26" fill="#f39c12"/>
+              <polygon points="77,24 69,12 62,26" fill="#f39c12"/>
+              <ellipse cx="50" cy="58" rx="26" ry="23" fill="#f4d03f"/>
+              <rect x="16" y="36" width="68" height="15" rx="2" fill="#111"/>
+              <rect x="20" y="39" width="22" height="9" rx="1" fill="#222"/>
+              <rect x="58" y="39" width="22" height="9" rx="1" fill="#222"/>
+              <rect x="46" y="40" width="8" height="4" fill="#111"/>
+              <ellipse cx="50" cy="66" rx="5" ry="3.5" fill="#222"/>
+              <path d="M40 73 Q50 79 60 73" stroke="#222" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            </svg>
+          </div>
+        </div>
+        <p class="text-base sm:text-lg md:text-xl text-slate-400 -mt-1">Real Scrypt Dogecoin pool miner — CPU threads or OpenCL GPU.<br>Pick a pool (no registration needed), watch real telemetry.</p>
+      </div>
+      <div class="text-right hidden md:block">
+        <div class="text-xs text-slate-500">POWERED BY</div>
+        <div class="font-mono text-xs sm:text-sm">PYTHON BACKEND • hashlib.scrypt + PyOpenCL</div>
+        <div class="text-[#f0b90b] text-[10px] sm:text-xs">GPU kernel self-tested against CPU</div>
+      </div>
+    </div>
+
+    <!-- WALLET + START PANEL -->
+    <div id="setup-panel" class="mining-panel rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 max-w-full sm:max-w-3xl">
+      <div class="mb-6">
+        <div class="uppercase tracking-[2px] text-xs font-semibold text-[#f0b90b]">STEP 1 — IDENTIFY YOURSELF</div>
+        <div class="text-xl sm:text-2xl font-bold mt-1">Enter your public Dogecoin address</div>
+        <div class="text-slate-400 text-sm mt-1">We only need your public address (checksum-verified). No private keys ever. <span class="text-[#f0b90b]">Real backend pool mining (CPU or GPU).</span></div>
+      </div>
+
+      <!-- mode + workers + pool selection BEFORE the START button -->
+      <div class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+        <div class="flex items-center bg-[#1f1f26] rounded-xl border border-[#3f3f4a] p-1">
+          <button type="button" onclick="setMiningMode('cpu')"
+                  class="doge-btn px-3 py-1 text-xs rounded-lg bg-[#f0b90b] text-[#0a0a0f] font-semibold" id="setup-mode-cpu">CPU</button>
+          <button type="button" onclick="setMiningMode('gpu')"
+                  class="doge-btn px-3 py-1 text-xs rounded-lg hover:bg-[#3f3f4a]" id="setup-mode-gpu">GPU</button>
+        </div>
+        <div class="flex items-center gap-x-1">
+          <span class="nerd-label">WORKERS</span>
+          <input id="setup-workers-input" type="number" min="1" placeholder="auto"
+                 class="doge-input w-16" title="Worker thread count (empty = all CPU cores - 1)">
+        </div>
+        <div class="flex items-center gap-x-1 min-w-0">
+          <span class="nerd-label">POOL</span>
+          <select id="pool-select" class="doge-select max-w-[240px]" onchange="onPoolSelected()"></select>
+        </div>
+      </div>
+
+      <!-- pool details row: registration hint + optional stratum credentials -->
+      <div id="pool-detail-row" class="mb-4 text-xs bg-[#0c0c0f] border border-[#1f1f26] rounded-xl p-3">
+        <div id="pool-detail-text" class="text-slate-400"></div>
+        <div id="pool-cred-inputs" class="hidden mt-2 flex flex-wrap gap-2">
+          <input id="pool-user-input" type="text" class="doge-input flex-1 min-w-[180px]" placeholder="pool username (account.worker)">
+          <input id="pool-pass-input" type="text" class="doge-input w-40" placeholder="worker password">
+        </div>
+        <div id="pool-custom-inputs" class="hidden mt-2 flex flex-wrap gap-2">
+          <input id="pool-host-input" type="text" class="doge-input flex-1 min-w-[180px]" placeholder="stratum host">
+          <input id="pool-port-input" type="number" class="doge-input w-24" placeholder="port">
+        </div>
+      </div>
+
+      <div class="flex gap-3">
+        <div class="flex-1">
+          <input id="wallet-input" type="text" value="DTW2M5oEW97WbmYJRM71qD7uE6xfJs1MUK"
+                 class="w-full bg-[#0a0a0f] border border-[#2a2a33] focus:border-[#f0b90b] px-3 sm:px-5 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-mono text-base sm:text-lg outline-none placeholder:text-slate-600"
+                 placeholder="D... your public DOGE address">
+          <div id="wallet-error" class="text-red-400 text-xs mt-1.5 hidden">That doesn't look like a valid Dogecoin address.</div>
+        </div>
+        <button onclick="startBackendMining()"
+                class="doge-btn px-4 sm:px-10 py-3 sm:py-4 bg-[#f0b90b] hover:bg-[#ff9f1c] text-[#0a0a0f] font-bold text-base sm:text-lg rounded-xl sm:rounded-2xl flex items-center gap-x-2 sm:gap-x-3 shadow-lg active:scale-[0.985] whitespace-nowrap">
+          <span class="mr-1">▶️</span>
+          <span>START MINING</span>
+        </button>
+      </div>
+
+      <div class="mt-5 flex flex-wrap items-center gap-x-6 gap-y-1 text-xs">
+        <div class="flex items-center gap-x-1.5 text-emerald-400">
+          <span>✅</span>
+          <span>Real Scrypt PoW (verified vs Dogecoin genesis)</span>
+        </div>
+        <div class="flex items-center gap-x-1.5 text-emerald-400">
+          <span>✅</span>
+          <span>CPU threads + OpenCL GPU (self-tested)</span>
+        </div>
+        <div class="flex items-center gap-x-1.5 text-emerald-400">
+          <span>✅</span>
+          <span>Pools without registration (wallet login)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN MINING DASHBOARD -->
+    <div id="mining-panel" class="hidden">
+      <!-- HEADER BAR -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-y-2">
+        <div>
+          <div class="flex items-center gap-x-2 sm:gap-x-3">
+            <div id="status-dot" class="w-3.5 h-3.5 bg-emerald-400 rounded-full animate-pulse"></div>
+            <div id="mining-title" class="font-semibold text-base sm:text-lg md:text-xl min-w-0">MINING TO <span id="active-wallet" class="font-mono text-[#f0b90b] break-all"></span></div>
+          </div>
+          <div class="text-xs text-slate-500 mt-0.5 flex items-center gap-x-3">
+            <span id="pool-info">Connecting to pool…</span>
+            <span class="text-[#f0b90b]/60">•</span>
+            <span id="worker-id"></span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-1 sm:gap-2 flex-nowrap">
+          <div class="flex items-center bg-[#1f1f26] rounded-xl border border-[#3f3f4a] p-1 mr-1 sm:mr-2 flex-shrink-0">
+            <button onclick="setMiningMode('cpu')" id="mode-cpu-btn"
+                    class="doge-btn px-2 sm:px-3 py-1 text-[10px] sm:text-xs rounded-lg bg-[#f0b90b] text-[#0a0a0f] font-semibold">CPU</button>
+            <button onclick="setMiningMode('gpu')" id="mode-gpu-btn"
+                    class="doge-btn px-2 sm:px-3 py-1 text-[10px] sm:text-xs rounded-lg hover:bg-[#3f3f4a]">GPU</button>
+          </div>
+          <input id="workers-input" type="number" min="1" placeholder="auto"
+                 class="doge-input w-16 sm:w-20 flex-shrink-0" title="Worker count (empty = all cores - 1)" />
+
+          <button id="dashboard-start-btn" onclick="startBackendMining()"
+                  class="doge-btn flex items-center gap-x-1 sm:gap-x-2 px-3 sm:px-5 py-1.5 sm:py-2 text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg sm:rounded-xl whitespace-nowrap flex-shrink-0">
+            <span>▶️</span>
+            <span>START</span>
+          </button>
+          <button id="dashboard-stop-btn" onclick="stopBackendMining()"
+                  class="doge-btn flex items-center gap-x-1 sm:gap-x-2 px-3 sm:px-6 py-1.5 sm:py-2 text-xs sm:text-sm bg-red-900/30 hover:bg-red-900/50 border border-red-900/60 text-red-400 rounded-lg sm:rounded-xl whitespace-nowrap flex-shrink-0">
+            <span>⏹️</span>
+            <span>STOP</span>
+          </button>
+          <button onclick="newSession()"
+                  class="doge-btn flex items-center gap-x-1 sm:gap-x-2 px-2 sm:px-3 py-1 sm:py-2 text-[10px] sm:text-xs bg-[#1f1f26] hover:bg-[#2a2a33] border border-[#3f3f4a] rounded-lg sm:rounded-xl text-slate-400 flex-shrink-0"
+                  title="Switch wallet / start fresh">
+            <span>🔄</span>
+          </button>
+          <button onclick="openConfigModal()"
+                  class="doge-btn flex items-center gap-x-1 px-1.5 sm:px-2 py-1 sm:py-1 text-[10px] sm:text-xs bg-[#1f1f26] hover:bg-[#2a2a33] border border-[#3f3f4a] rounded-lg sm:rounded-xl text-slate-400 flex-shrink-0"
+                  title="Configure wallet & pool">
+            <span>⚙️</span>
+          </button>
+          <button onclick="showHelpModal()"
+                  class="doge-btn flex items-center gap-x-1 px-1.5 sm:px-2 py-1 sm:py-1 text-[10px] sm:text-xs bg-[#1f1f26] hover:bg-[#2a2a33] border border-[#3f3f4a] rounded-lg sm:rounded-xl text-slate-400 flex-shrink-0"
+                  title="How mining & payouts work">
+            <span>❓</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- TOP STATS ROW -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 mb-4">
+
+        <!-- HASHRATE -->
+        <div class="stat-card rounded-3xl p-3 sm:p-5 col-span-2 lg:col-span-2 border border-[#f0b90b]/20">
+          <div class="flex justify-between items-start">
+            <div>
+              <div class="nerd-label">CURRENT HASHRATE</div>
+              <div id="hashrate-value" class="hashrate text-xl sm:text-2xl md:text-3xl lg:text-[3.2rem] text-[#f0b90b]">0.00</div>
+              <div class="text-sm text-[#f0b90b]/60 -mt-1">KH/s</div>
+            </div>
+            <div class="text-right">
+              <div id="hashrate-diff" class="text-xs px-2 py-0.5 rounded-full bg-emerald-900/40 text-emerald-400 inline-block">±0.0%</div>
+              <div class="mt-2 flex justify-end">
+                <div class="hash-dots"><div class="hash-dot"></div><div class="hash-dot"></div><div class="hash-dot"></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="mt-1 text-xs text-slate-500">rolling ~60s • peak <span id="hashrate-peak">0.00</span> KH/s</div>
+        </div>
+
+        <div class="stat-card rounded-3xl p-3 sm:p-5">
+          <div class="nerd-label">SHARES</div>
+          <div class="flex items-baseline gap-x-2">
+            <div id="shares-accepted" class="big-number text-xl sm:text-2xl md:text-[2.1rem] text-emerald-400">0</div>
+            <div class="text-sm text-emerald-400/50">/ <span id="shares-rejected">0</span></div>
+          </div>
+          <div class="text-xs mt-0.5">ACCEPTED / REJECTED • <span id="shares-submitted">0</span> submitted</div>
+          <div class="mt-3 h-2 bg-[#1f1f26] rounded-full overflow-hidden" title="acceptance efficiency">
+            <div id="share-progress" class="share-bar h-2 bg-emerald-400" style="width: 100%"></div>
+          </div>
+        </div>
+
+        <div class="stat-card rounded-3xl p-3 sm:p-5">
+          <div class="nerd-label">WALLET BALANCE <span class="text-[9px] normal-case">(on-chain)</span></div>
+          <div class="flex items-baseline">
+            <div id="doge-earned" class="big-number text-xl sm:text-2xl md:text-[2.1rem] text-[#f0b90b]">0.000000</div>
+            <span class="ml-1 text-[#f0b90b]/60">Ð</span>
+          </div>
+          <div class="text-xs">≈ $<span id="usd-earned">0.00</span> <span class="text-slate-500">(@ $<span id="doge-price">—</span> live)</span></div>
+          <div class="mt-2 text-[10px] text-slate-500">Pool payouts land here per pool rules</div>
+        </div>
+
+        <div class="stat-card rounded-3xl p-3 sm:p-5">
+          <div class="nerd-label">SESSION</div>
+          <div id="uptime" class="big-number text-xl sm:text-2xl md:text-[2.1rem] font-mono">00:00:00</div>
+          <div class="flex gap-x-4 text-xs mt-1">
+            <div><span class="text-slate-500">TOTAL HASHES</span><br><span id="total-hashes" class="font-mono">0</span></div>
+            <div><span class="text-slate-500" title="highest pool-difficulty any hash this session achieved">BEST SHARE</span><br><span id="best-share" class="font-mono text-[#f0b90b]">0</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CHART + EFFORT -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 mb-4">
+        <div class="lg:col-span-3 mining-panel rounded-3xl p-4">
+          <div class="flex justify-between px-2 mb-2 items-center">
+            <div>
+              <span class="font-semibold">HASHRATE HISTORY</span>
+              <span class="text-xs ml-2 text-slate-500">last ~4 minutes</span>
+            </div>
+            <div class="text-xs flex items-center gap-3">
+              <div class="flex items-center gap-x-1"><div class="w-2 h-0.5 bg-[#f0b90b]"></div><span class="text-xs text-slate-400">KH/s</span></div>
+            </div>
+          </div>
+          <div class="chart-container px-1" style="height: 90px; min-height: 70px;">
+            <canvas id="hashrate-chart"></canvas>
+          </div>
+        </div>
+
+        <div class="lg:col-span-2 mining-panel rounded-3xl p-4 flex flex-col">
+          <div class="flex justify-between text-xs mb-2 px-1">
+            <div class="font-semibold">SCRYPT EFFORT</div>
+            <div id="effort-text" class="font-mono text-[#f0b90b]">SEARCHING</div>
+          </div>
+
+          <div class="flex-1 flex flex-col justify-center px-2">
+            <div class="h-5 bg-[#1a1a20] rounded-full overflow-hidden border border-[#2a2a33]">
+              <div id="effort-bar" class="h-5 bg-gradient-to-r from-[#f0b90b] to-[#ff9f1c] share-bar" style="width: 0%"></div>
+            </div>
+            <div class="mt-1 text-[10px] flex justify-between text-slate-400 font-mono">
+              <div>NONCE <span id="current-nonce">0x00000000</span></div>
+              <div id="effort-percent">0%</div>
+            </div>
+          </div>
+
+          <div class="mt-4 px-1 grid grid-cols-3 gap-2 text-center text-xs">
+            <div class="bg-[#0c0c0f] rounded p-2 border border-[#1f1f26]">
+              <div class="text-emerald-400 text-[10px]">LUCK</div>
+              <div id="luck-stat" class="font-mono font-semibold">100%</div>
+            </div>
+            <div class="bg-[#0c0c0f] rounded p-2 border border-[#1f1f26]">
+              <div class="text-emerald-400 text-[10px]">STREAK</div>
+              <div id="streak-stat" class="font-mono font-semibold">0</div>
+            </div>
+            <div class="bg-[#0c0c0f] rounded p-2 border border-[#1f1f26]">
+              <div class="text-emerald-400 text-[10px]">EFFICIENCY</div>
+              <div id="efficiency-stat" class="font-mono font-semibold">100%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CPU / GPU MONITORING CHARTS (both real: psutil + nvidia-smi) -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-4">
+        <div class="mining-panel rounded-3xl p-4">
+          <div class="flex justify-between px-2 mb-2 items-center">
+            <div>
+              <span class="font-semibold">CPU UTILIZATION</span>
+              <span class="text-xs ml-2 text-slate-500">real (psutil)</span>
+            </div>
+            <div class="text-xs font-mono text-emerald-400" id="cpu-percent">0.0%</div>
+          </div>
+          <div class="chart-container px-1" style="height: 80px; min-height: 60px;">
+            <canvas id="cpu-chart"></canvas>
+          </div>
+        </div>
+
+        <div class="mining-panel rounded-3xl p-4">
+          <div class="flex justify-between px-2 mb-2 items-center">
+            <div>
+              <span class="font-semibold">GPU UTILIZATION</span>
+              <span class="text-xs ml-2 text-slate-500" id="gpu-panel-note">real (nvidia-smi; 0% without NVIDIA tools)</span>
+            </div>
+            <div class="text-xs font-mono text-emerald-400" id="gpu-percent">0.0%</div>
+          </div>
+          <div class="chart-container px-1" style="height: 80px; min-height: 60px;">
+            <canvas id="gpu-chart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- NERD MODE + LIVE FEED -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-4">
+        <div class="mining-panel rounded-3xl p-4">
+          <div class="flex items-center justify-between mb-3 px-1">
+            <div class="flex items-center gap-x-2">
+              <span class="text-[#f0b90b]">🖥️</span>
+              <span class="font-semibold">NERD MODE</span>
+              <span class="text-[10px] text-slate-500">(all real datapoints)</span>
+            </div>
+            <div onclick="copyNerdStats()" class="cursor-pointer text-xs text-slate-500 hover:text-slate-300 flex items-center gap-x-1">
+              <span>📋</span> <span>COPY</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-3 sm:gap-x-4 gap-y-2 sm:gap-y-3 text-xs sm:text-sm nerd-box rounded-2xl p-3 sm:p-4">
+            <div>
+              <div class="nerd-label">BLOCK HEIGHT <span class="text-[8px]">(live chain)</span></div>
+              <div id="block-height" class="font-mono text-xl">—</div>
+            </div>
+            <div>
+              <div class="nerd-label">NET DIFFICULTY</div>
+              <div id="net-difficulty" class="font-mono text-xl">—</div>
+            </div>
+
+            <div>
+              <div class="nerd-label">SCRYPT PARAMS</div>
+              <div class="font-mono text-[#f0b90b] scrypt-visual">N=1024 • r=1 • p=1</div>
+            </div>
+            <div>
+              <div class="nerd-label">SHARE TARGET <span class="text-[8px]">(pool diff <span id="pool-diff">—</span>)</span></div>
+              <div id="target-hex" class="font-mono text-xs break-all text-emerald-400">—</div>
+            </div>
+
+            <div>
+              <div class="nerd-label">LAST HASH (scrypt PoW)</div>
+              <div id="last-hash" class="font-mono text-xs text-slate-400 break-all">—</div>
+            </div>
+            <div>
+              <div class="nerd-label">NONCES SEARCHED</div>
+              <div id="nonces-searched" class="font-mono text-lg">0</div>
+            </div>
+
+            <div class="col-span-2 pt-1 border-t border-[#1f1f26] mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+              <div><span class="text-slate-500">THREADS</span> <span id="threads" class="font-mono">1</span></div>
+              <div><span class="text-slate-500">MEM</span> <span id="mem-used" class="font-mono">0%</span></div>
+              <div><span class="text-slate-500">CPU</span> <span id="cpu-load" class="font-mono">0%</span></div>
+              <div><span class="text-slate-500">GPU</span> <span id="gpu-load" class="font-mono">0%</span></div>
+              <div><span class="text-slate-500">BACKEND</span> <span id="mine-backend" class="font-mono">—</span></div>
+            </div>
+          </div>
+        </div>
+        <!-- LIVE FEED -->
+        <div class="mining-panel rounded-3xl overflow-hidden flex flex-col min-h-[160px] sm:min-h-[200px] lg:min-h-[260px]">
+          <div class="terminal-header px-4 py-1 flex items-center justify-between text-xs flex-shrink-0">
+            <span class="font-semibold">LIVE FEED (backend + UI)</span>
+            <div class="flex gap-x-2 text-[10px]">
+              <button onclick="clearLog()" class="px-2 py-px hover:bg-[#2a2a33] rounded text-slate-400">CLEAR</button>
+              <button onclick="exportLog()" class="px-2 py-px hover:bg-[#2a2a33] rounded text-slate-400">EXPORT</button>
+            </div>
+          </div>
+          <div id="log-container" class="p-2 sm:p-3 overflow-auto flex-1 min-h-0 doge-log bg-[#0a0a0f] text-emerald-300/90 space-y-px text-[11px] sm:text-[12px]">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BLOCKCHAIN EXPLORER (always visible, key-free, backend-cached) -->
+    <div class="mt-6">
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center gap-x-2">
+          <span class="text-[#f0b90b] text-lg">⛓️</span>
+          <span class="font-semibold text-lg">DOGECOIN BLOCKCHAIN</span>
+          <span class="text-[10px] text-slate-500">live • no API keys • cached backend-side so you never hit rate limits</span>
+        </div>
+        <div class="text-[10px] text-slate-500">source: <span id="chain-source" class="font-mono">—</span></div>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mb-3 text-center">
+        <div class="chain-chip"><div class="nerd-label">HEIGHT</div><div id="chain-height" class="font-mono text-sm sm:text-base">—</div></div>
+        <div class="chain-chip"><div class="nerd-label">DIFFICULTY</div><div id="chain-difficulty" class="font-mono text-sm sm:text-base">—</div></div>
+        <div class="chain-chip"><div class="nerd-label">NET HASHRATE</div><div id="chain-hashrate" class="font-mono text-sm sm:text-base">—</div></div>
+        <div class="chain-chip"><div class="nerd-label">PRICE (USD)</div><div id="chain-price" class="font-mono text-sm sm:text-base">—</div></div>
+        <div class="chain-chip"><div class="nerd-label">MEMPOOL TX</div><div id="chain-mempool" class="font-mono text-sm sm:text-base">—</div></div>
+        <div class="chain-chip"><div class="nerd-label">BLOCKS 24H</div><div id="chain-blocks24" class="font-mono text-sm sm:text-base">—</div></div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <div class="mining-panel rounded-3xl p-4">
+          <div class="font-semibold text-sm mb-2 px-1">RECENT BLOCKS</div>
+          <div class="overflow-x-auto">
+            <table class="chain-table w-full text-left">
+              <thead><tr class="text-slate-500"><th>HEIGHT</th><th>TIME</th><th>TXS</th><th>SIZE</th><th>HASH</th></tr></thead>
+              <tbody id="chain-blocks-body"><tr><td colspan="5" class="text-slate-600">loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="mining-panel rounded-3xl p-4">
+          <div class="font-semibold text-sm mb-2 px-1">ADDRESS LOOKUP <span class="text-[10px] text-slate-500">(any DOGE address — no keys, no signup)</span></div>
+          <div class="flex gap-2 mb-3">
+            <input id="explore-addr-input" type="text" class="doge-input flex-1 font-mono" placeholder="D… address to inspect">
+            <button onclick="lookupAddress()" class="doge-btn px-4 py-1 text-xs bg-[#f0b90b] text-[#0a0a0f] font-semibold rounded-lg">LOOKUP</button>
+          </div>
+          <div id="explore-result" class="text-xs nerd-box rounded-xl p-3 text-slate-400">Enter an address to see its live balance and recent transactions.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOTTOM BAR -->
+    <div class="mt-6 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs">
+      <div class="flex-1"></div>
+      <div class="text-[10px] text-slate-500 flex items-center gap-x-2">
+        <span>REAL POOL MINING RUNS IN THE PYTHON BACKEND. Educational project — CPU/GPU hashrates are far below ASICs; payouts come from your chosen pool, not this app.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONFIG MODAL -->
+  <div id="config-modal" class="hidden fixed inset-0 bg-black/60 z-[100] flex items-center justify-center" onclick="if (event.target.id === 'config-modal') closeConfigModal()">
+    <div class="mining-panel rounded-3xl p-6 w-full max-w-md mx-4" onclick="event.stopImmediatePropagation()">
+      <div class="flex justify-between items-center mb-4">
+        <div class="font-semibold text-lg">Configuration</div>
+        <button onclick="closeConfigModal()" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+      <div class="space-y-4 text-sm">
+        <div>
+          <label class="nerd-label block mb-1">Wallet Address</label>
+          <input id="config-wallet" type="text" class="w-full bg-[#0a0a0f] border border-[#2a2a33] px-3 py-2 rounded font-mono text-sm">
+        </div>
+        <div>
+          <label class="nerd-label block mb-1">Mining Pool</label>
+          <select id="config-pool-select" class="doge-select w-full" onchange="onConfigPoolSelected()"></select>
+          <div id="config-pool-note" class="text-[10px] text-slate-500 mt-1"></div>
+        </div>
+        <div id="config-cred-row" class="hidden grid grid-cols-2 gap-3">
+          <div>
+            <label class="nerd-label block mb-1">Pool Username</label>
+            <input id="config-pool-user" type="text" class="w-full bg-[#0a0a0f] border border-[#2a2a33] px-3 py-2 rounded font-mono text-sm" placeholder="account.worker">
+          </div>
+          <div>
+            <label class="nerd-label block mb-1">Pool Password</label>
+            <input id="config-pool-pass" type="text" class="w-full bg-[#0a0a0f] border border-[#2a2a33] px-3 py-2 rounded font-mono text-sm" placeholder="x">
+          </div>
+        </div>
+        <div id="config-custom-row" class="hidden grid grid-cols-2 gap-3">
+          <div>
+            <label class="nerd-label block mb-1">Stratum Host</label>
+            <input id="config-pool-host" type="text" class="w-full bg-[#0a0a0f] border border-[#2a2a33] px-3 py-2 rounded font-mono text-sm">
+          </div>
+          <div>
+            <label class="nerd-label block mb-1">Stratum Port</label>
+            <input id="config-pool-port" type="number" class="w-full bg-[#0a0a0f] border border-[#2a2a33] px-3 py-2 rounded font-mono text-sm">
+          </div>
+        </div>
+        <div class="text-[10px] text-amber-400">Changes restart the mining session when applied while running.</div>
+      </div>
+      <div class="mt-5 flex gap-3">
+        <button onclick="saveConfig()" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-semibold">Save & Apply</button>
+        <button onclick="closeConfigModal()" class="px-4 py-2 bg-[#1f1f26] hover:bg-[#2a2a33] border border-[#3f3f4a] rounded-xl text-sm">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HELP MODAL -->
+  <div id="help-modal" class="hidden fixed inset-0 bg-black/60 z-[100] flex items-center justify-center" onclick="if (event.target.id === 'help-modal') closeHelpModal()">
+    <div class="mining-panel rounded-3xl p-6 w-full max-w-lg mx-4 max-h-[80vh] overflow-auto" onclick="event.stopImmediatePropagation()">
+      <div class="flex justify-between items-center mb-4">
+        <div class="font-semibold text-lg">How This Miner Works</div>
+        <button onclick="closeHelpModal()" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+      <div class="text-sm space-y-3 text-slate-300">
+        <p><strong>Real backend pool mining</strong></p>
+        <p>The Python backend connects to your chosen pool over Stratum, receives real jobs, and hashes them with <strong>actual Scrypt PoW</strong> (N=1024, r=1, p=1 — the same function Dogecoin uses; verified in tests against the Dogecoin genesis block). Shares that meet the pool target are submitted; accepted/rejected counters come exclusively from pool responses.</p>
+
+        <p><strong>CPU vs GPU mode</strong></p>
+        <p>CPU mode runs worker threads with <code>hashlib.scrypt</code> (the GIL is released, so threads scale across cores). GPU mode compiles an OpenCL scrypt kernel (NVIDIA/AMD/Intel, Windows/macOS/Linux). The kernel must pass a self-test against the CPU implementation before it's used, and every GPU share candidate is re-verified on the CPU before submission. If no usable GPU exists, it falls back to CPU threads and says so.</p>
+
+        <p><strong>Pools & payouts</strong></p>
+        <p>The default pool (zpool) needs <strong>no registration</strong> — your wallet address is the login and payouts go straight to it (subject to the pool's minimum payout rules). Registered pools (AikaPool, litecoinpool, F2Pool) need a free account; use <em>account.worker</em> as the username. Realistic expectations: CPU/GPU scrypt hashrates are tiny compared to ASICs, so actual DOGE payouts will be very small and slow to reach pool minimums.</p>
+
+        <p><strong>Blockchain data</strong></p>
+        <p>Block height, difficulty, network hashrate, price, recent blocks and address lookups come live from public explorers (Blockbook, Blockchair, BlockCypher, CoinGecko) — no API keys. The backend caches every response so your browser never hits provider rate limits.</p>
+
+        <p><strong>What's real (everything visible)</strong></p>
+        <p>Hashrate, hashes, nonces, share counters, pool status, difficulty/target, best share, CPU/MEM (psutil), GPU utilization (nvidia-smi), wallet balance (on-chain), price (live). Nothing on this page is simulated.</p>
+
+        <p class="text-xs text-slate-500 pt-2 border-t border-[#2a2a33]">Educational full-stack example. Not financial advice.</p>
+      </div>
+      <div class="mt-4 text-right">
+        <button onclick="closeHelpModal()" class="px-4 py-1.5 bg-[#1f1f26] hover:bg-[#2a2a33] border border-[#3f3f4a] rounded text-xs">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST CONTAINER -->
+  <div id="toast-container" class="fixed bottom-5 right-5 space-y-2 z-50"></div>
+
+  <script>
+    // =============== CONFIG & STATE ===============
+    let state = {
+      running: false,
+      wallet: '',
+      peakHashrate: 0,
+      lastHashrate: 0,
+      cpuHistory: [],
+      gpuHistory: [],
+    };
+
+    let chartPoints = [];       // transient hashrate chart buffer (from /api/stats polls)
+    let feedBuffer = [];        // live feed lines
+    let lastSeenBackendLogId = 0;
+    let hashrateChartCtx = null;
+    let statsInterval = null;
+    let chainInterval = null;
+
+    const BACKEND_URL = '';
+    let backendMode = 'cpu';
+    let livePrice = 0;          // real DOGE/USD from /api/chain/summary
+
+    // pool selection state (persisted in localStorage)
+    let poolList = [];          // from /api/pools
+    let currentPoolId = 'zpool';
+    let currentPoolUser = '';
+    let currentPoolPass = '';
+    let customPoolHost = '';
+    let customPoolPort = null;
+
+    // =============== UTILS ===============
+    function formatNumber(n, digits) {
+      if (digits === undefined) digits = 0;
+      if (n >= 1e12) return (n / 1e12).toFixed(digits || 1) + "T";
+      if (n >= 1e9) return (n / 1e9).toFixed(digits || 1) + "B";
+      if (n >= 1e6) return (n / 1e6).toFixed(digits || 1) + "M";
+      if (n >= 1e3) return (n / 1e3).toFixed(digits || 1) + "K";
+      return n.toLocaleString();
+    }
+
+    function formatUptime(secs) {
+      secs = Math.max(0, Math.floor(secs || 0));
+      var h = Math.floor(secs / 3600);
+      var m = Math.floor((secs % 3600) / 60);
+      var s = secs % 60;
+      var hs = String(h); if (hs.length < 2) hs = "0" + hs;
+      var ms = String(m); if (ms.length < 2) ms = "0" + ms;
+      var ss = String(s); if (ss.length < 2) ss = "0" + ss;
+      return hs + ":" + ms + ":" + ss;
+    }
+
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function renderFeed() {
+      const htmls = feedBuffer.map(entry => {
+        const [ts, msg, typ] = entry;
+        return `<div class="log-line px-2 py-0.5 ${typ}"><span class="text-[#64748b] text-[10px]">${ts}</span> ${esc(msg)}</div>`;
+      }).join('');
+      const cont = document.getElementById("log-container");
+      if (cont) {
+        cont.innerHTML = htmls;
+        cont.scrollTop = cont.scrollHeight;
+      }
+    }
+
+    function log(msg, type = "info") {
+      const ts = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+      feedBuffer.push([ts, msg, type]);
+      while (feedBuffer.length > 60) feedBuffer.shift();
+      renderFeed();
+    }
+
+    function clearLog() {
+      feedBuffer = [];
+      const c = document.getElementById("log-container");
+      if (c) c.innerHTML = "";
+    }
+
+    function exportLog() {
+      const lines = feedBuffer.map(([ts, msg]) => `${ts} ${msg}`).join("\n");
+      const blob = new Blob([lines], {type: "text/plain"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `doge-miner-log-${Date.now()}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+      log("log exported to file", "info");
+    }
+
+    function showToast(title, subtitle = "", color = "#f0b90b") {
+      const container = document.getElementById("toast-container");
+      const toast = document.createElement("div");
+      toast.className = `fun-toast max-w-xs px-4 py-3 rounded-2xl bg-[#111114] border flex gap-x-3 items-start shadow-xl`;
+      toast.style.borderColor = color;
+      toast.innerHTML = `
+        <div class="pt-0.5"><span style="font-size:1.1rem; color:${color}">🐕</span></div>
+        <div class="flex-1 min-w-0">
+          <div class="font-semibold text-sm">${esc(title)}</div>
+          ${subtitle ? `<div class="text-xs text-slate-400 mt-px">${esc(subtitle)}</div>` : ""}
+        </div>`;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.transition = "all 220ms ease";
+        toast.style.opacity = "0";
+        toast.style.transform = "translateY(12px)";
+        setTimeout(() => toast.remove(), 200);
+      }, 3100);
+    }
+
+    function playBeep(type = "share") {
+      try {
+        const audio = new (window.AudioContext || window.webkitAudioContext)();
+        if (audio.state === 'suspended') audio.resume();
+        const osc = audio.createOscillator();
+        const gain = audio.createGain();
+        if (type === "share") { osc.frequency.value = 780; osc.type = "sawtooth"; gain.gain.value = 0.06; }
+        else if (type === "reject") { osc.frequency.value = 220; osc.type = "sawtooth"; gain.gain.value = 0.05; }
+        else { osc.frequency.value = 620; osc.type = "sine"; gain.gain.value = 0.04; }
+        osc.connect(gain); gain.connect(audio.destination);
+        const now = audio.currentTime;
+        osc.start(now);
+        gain.gain.setValueAtTime(gain.gain.value, now);
+        gain.gain.linearRampToValueAtTime(0.001, now + 0.25);
+        setTimeout(() => { try { osc.stop(); } catch(e){} }, 300);
+      } catch(e) {}
+    }
+
+    // =============== VALIDATION ===============
+    function isValidDogeAddress(addr) {
+      if (!addr) return false;
+      addr = addr.trim();
+      // SYNC: backend/wallet_validation.py _DOGE_RE format pre-filter; D (P2PKH) or 9/A (P2SH) prefix + base58.
+      // Backend additionally verifies the Base58Check checksum (authoritative).
+      if (addr.length < 20 || (addr.charAt(0) != "D" && addr.charAt(0) != "9" && addr.charAt(0) != "A")) return false;
+      return /^[D9A][1-9A-HJ-NP-Za-km-z]{25,34}$/.test(addr);
+    }
+
+    // =============== POOL SELECTION ===============
+    function findPool(id) {
+      for (var i = 0; i < poolList.length; i++) if (poolList[i].id === id) return poolList[i];
+      return null;
+    }
+
+    async function loadPools() {
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/pools`);
+        const data = await res.json();
+        poolList = data.pools || [];
+        if (!findPool(currentPoolId) && currentPoolId !== 'custom') currentPoolId = data.default || 'zpool';
+        renderPoolSelect('pool-select');
+        renderPoolSelect('config-pool-select');
+        onPoolSelected(true);
+      } catch (e) {
+        log('Could not load pool list from backend', 'info');
+      }
+    }
+
+    function renderPoolSelect(elId) {
+      const sel = document.getElementById(elId);
+      if (!sel) return;
+      let html = '';
+      for (const p of poolList) {
+        const tag = p.registration_required ? ' [account needed]' : ' [no signup]';
+        html += `<option value="${esc(p.id)}">${esc(p.name)}${tag}</option>`;
+      }
+      html += '<option value="custom">Custom pool… (your own host/port)</option>';
+      sel.innerHTML = html;
+      sel.value = currentPoolId;
+    }
+
+    function poolDetailHtml(p) {
+      if (!p) return 'Custom pool: enter your stratum host and port below. Username defaults to your wallet.';
+      const reg = p.registration_required
+        ? `<span class="text-amber-400">Registration required</span> — create a free account at <a class="underline" target="_blank" rel="noopener" href="${esc(p.web)}">${esc(p.web)}</a>, then enter <b>${esc(p.username_hint)}</b> below.`
+        : `<span class="text-emerald-400">No registration</span> — your wallet address is the login; payouts go straight to it.`;
+      return `${reg}<br><span class="text-slate-500">${esc(p.notes || '')} Payout: ${esc(p.payout || '')}. Default password: <code>${esc(p.password_default || 'x')}</code></span>`;
+    }
+
+    function onPoolSelected(silent) {
+      const sel = document.getElementById('pool-select');
+      if (sel) currentPoolId = sel.value;
+      const p = findPool(currentPoolId);
+      const det = document.getElementById('pool-detail-text');
+      if (det) det.innerHTML = poolDetailHtml(currentPoolId === 'custom' ? null : p);
+      const creds = document.getElementById('pool-cred-inputs');
+      const custom = document.getElementById('pool-custom-inputs');
+      const needCreds = (p && p.registration_required) || currentPoolId === 'custom';
+      if (creds) creds.classList.toggle('hidden', !needCreds);
+      if (custom) custom.classList.toggle('hidden', currentPoolId !== 'custom');
+      const pu = document.getElementById('pool-user-input');
+      const pp = document.getElementById('pool-pass-input');
+      if (pu) { pu.value = currentPoolUser || ''; pu.placeholder = p ? p.username_hint : 'stratum username (blank = wallet)'; }
+      if (pp) { pp.value = currentPoolPass || ''; pp.placeholder = p ? ('password (blank = ' + (p.password_default || 'x') + ')') : 'password'; }
+      const ph = document.getElementById('pool-host-input');
+      const ppo = document.getElementById('pool-port-input');
+      if (ph) ph.value = customPoolHost || '';
+      if (ppo) ppo.value = customPoolPort || '';
+      try { localStorage.setItem('doge-pool-id', currentPoolId); } catch(e){}
+      if (!silent) log(`Pool selected: ${p ? p.name : 'custom'}`, 'info');
+    }
+
+    function readPoolInputs() {
+      const pu = document.getElementById('pool-user-input');
+      const pp = document.getElementById('pool-pass-input');
+      const ph = document.getElementById('pool-host-input');
+      const ppo = document.getElementById('pool-port-input');
+      if (pu) currentPoolUser = pu.value.trim();
+      if (pp) currentPoolPass = pp.value.trim();
+      if (ph) customPoolHost = ph.value.trim();
+      if (ppo) customPoolPort = parseInt(ppo.value, 10) || null;
+      try {
+        localStorage.setItem('doge-pool-user', currentPoolUser);
+        localStorage.setItem('doge-pool-pass', currentPoolPass);
+        localStorage.setItem('doge-pool-host', customPoolHost);
+        localStorage.setItem('doge-pool-port', customPoolPort || '');
+      } catch(e){}
+    }
+
+    // =============== CONFIG MODAL ===============
+    function openConfigModal() {
+      const modal = document.getElementById('config-modal');
+      if (!modal) return;
+      const w = document.getElementById('config-wallet');
+      if (w) w.value = document.getElementById('wallet-input')?.value || '';
+      renderPoolSelect('config-pool-select');
+      onConfigPoolSelected();
+      const cu = document.getElementById('config-pool-user'); if (cu) cu.value = currentPoolUser;
+      const cp = document.getElementById('config-pool-pass'); if (cp) cp.value = currentPoolPass;
+      const ch = document.getElementById('config-pool-host'); if (ch) ch.value = customPoolHost;
+      const cpo = document.getElementById('config-pool-port'); if (cpo) cpo.value = customPoolPort || '';
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function onConfigPoolSelected() {
+      const sel = document.getElementById('config-pool-select');
+      const id = sel ? sel.value : currentPoolId;
+      const p = findPool(id);
+      const note = document.getElementById('config-pool-note');
+      if (note) note.innerHTML = poolDetailHtml(id === 'custom' ? null : p);
+      const credRow = document.getElementById('config-cred-row');
+      const customRow = document.getElementById('config-custom-row');
+      const needCreds = (p && p.registration_required) || id === 'custom';
+      if (credRow) credRow.classList.toggle('hidden', !needCreds);
+      if (customRow) customRow.classList.toggle('hidden', id !== 'custom');
+    }
+
+    function closeConfigModal() {
+      const modal = document.getElementById('config-modal');
+      if (modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
+    }
+
+    function saveConfig() {
+      const w = document.getElementById('config-wallet');
+      const wallet = w ? w.value.trim() : '';
+      if (!wallet || !isValidDogeAddress(wallet)) {
+        showToast('Config error', 'Invalid Dogecoin wallet address', '#ef4444');
+        return;
+      }
+      const sel = document.getElementById('config-pool-select');
+      if (sel) currentPoolId = sel.value;
+      const cu = document.getElementById('config-pool-user'); if (cu) currentPoolUser = cu.value.trim();
+      const cp = document.getElementById('config-pool-pass'); if (cp) currentPoolPass = cp.value.trim();
+      const ch = document.getElementById('config-pool-host'); if (ch) customPoolHost = ch.value.trim();
+      const cpo = document.getElementById('config-pool-port'); if (cpo) customPoolPort = parseInt(cpo.value, 10) || null;
+      document.getElementById('wallet-input').value = wallet;
+      try {
+        localStorage.setItem('doge-wallet', wallet);
+        localStorage.setItem('doge-pool-id', currentPoolId);
+        localStorage.setItem('doge-pool-user', currentPoolUser);
+        localStorage.setItem('doge-pool-pass', currentPoolPass);
+        localStorage.setItem('doge-pool-host', customPoolHost);
+        localStorage.setItem('doge-pool-port', customPoolPort || '');
+      } catch(e){}
+      const ps = document.getElementById('pool-select');
+      if (ps) ps.value = currentPoolId;
+      onPoolSelected(true);
+      closeConfigModal();
+      log('Configuration updated', 'info');
+      if (state && state.running) {
+        log('Applying new configuration to running session (restart)…', 'info');
+        startBackendMining();
+      }
+    }
+
+    function showHelpModal() {
+      const modal = document.getElementById('help-modal');
+      if (modal) { modal.classList.remove('hidden'); modal.classList.add('flex'); }
+    }
+    function closeHelpModal() {
+      const modal = document.getElementById('help-modal');
+      if (modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
+    }
+
+    // =============== UI PHASES ===============
+    function setMiningPhase(phase) {
+      const mp = document.getElementById('mining-panel');
+      const sp = document.getElementById('setup-panel');
+      const titleBar = document.getElementById('mining-title');
+      if (statsInterval) { clearInterval(statsInterval); statsInterval = null; }
+      if (phase === 'setup') {
+        if (mp) mp.classList.add('hidden');
+        if (sp) sp.classList.remove('hidden');
+        if (titleBar) titleBar.innerHTML = `MINING TO <span id="active-wallet" class="font-mono text-[#f0b90b] break-all"></span>`;
+        const hv = document.getElementById('hashrate-value'); if (hv) hv.textContent = '0.00';
+        const up = document.getElementById('uptime'); if (up) up.textContent = '00:00:00';
+        const sa = document.getElementById('shares-accepted'); if (sa) sa.textContent = '0';
+        const sr = document.getElementById('shares-rejected'); if (sr) sr.textContent = '0';
+        updateMiningButtons(false);
+      } else if (phase === 'active') {
+        if (mp) mp.classList.remove('hidden');
+        if (sp) sp.classList.add('hidden');
+        updateMiningButtons(true);
+      } else if (phase === 'stopped') {
+        if (mp) mp.classList.remove('hidden');
+        if (sp) sp.classList.remove('hidden');
+        if (titleBar) titleBar.innerHTML = `MINING STOPPED <span class="text-sm text-slate-400 ml-2">(START to resume, 🔄 for new session)</span>`;
+        if (state) state.running = false;
+        updateMiningButtons(false);
+      }
+    }
+
+    function updateMiningButtons(running) {
+      const startBtn = document.getElementById('dashboard-start-btn');
+      const stopBtn = document.getElementById('dashboard-stop-btn');
+      if (!startBtn || !stopBtn) return;
+      if (running) {
+        stopBtn.classList.remove('bg-red-900/30', 'hover:bg-red-900/50', 'border-red-900/60', 'text-red-400');
+        stopBtn.classList.add('bg-red-600', 'hover:bg-red-500', 'border-transparent', 'text-white');
+        startBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-500', 'text-white');
+        startBtn.classList.add('bg-emerald-900/30', 'hover:bg-emerald-800/40', 'text-emerald-400', 'border', 'border-emerald-900/60');
+      } else {
+        startBtn.classList.remove('bg-emerald-900/30', 'hover:bg-emerald-800/40', 'text-emerald-400', 'border', 'border-emerald-900/60');
+        startBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-500', 'text-white');
+        stopBtn.classList.remove('bg-red-600', 'hover:bg-red-500', 'border-transparent', 'text-white');
+        stopBtn.classList.add('bg-red-900/30', 'hover:bg-red-900/50', 'border', 'border-red-900/60', 'text-red-400');
+      }
+    }
+
+    function setMiningMode(mode) {
+      const prevMode = backendMode;
+      backendMode = mode;
+      const pairs = [['mode-cpu-btn', 'mode-gpu-btn'], ['setup-mode-cpu', 'setup-mode-gpu']];
+      for (const [cpuId, gpuId] of pairs) {
+        const cpuBtn = document.getElementById(cpuId);
+        const gpuBtn = document.getElementById(gpuId);
+        if (!cpuBtn || !gpuBtn) continue;
+        const on = mode === 'cpu' ? cpuBtn : gpuBtn;
+        const off = mode === 'cpu' ? gpuBtn : cpuBtn;
+        on.classList.add('bg-[#f0b90b]', 'text-[#0a0a0f]', 'font-semibold');
+        on.classList.remove('hover:bg-[#3f3f4a]');
+        off.classList.remove('bg-[#f0b90b]', 'text-[#0a0a0f]', 'font-semibold');
+        off.classList.add('hover:bg-[#3f3f4a]');
+      }
+      if (prevMode !== mode) log(`Mode set to ${mode.toUpperCase()}`, 'info');
+      if (prevMode !== mode && state && state.running) {
+        setTimeout(() => { if (state && state.running) startBackendMining(); }, 50);
+      }
+    }
+
+    function showWalletError(msg) {
+      const err = document.getElementById('wallet-error');
+      if (err) {
+        err.textContent = msg || 'That does not look like a valid Dogecoin address.';
+        err.classList.remove('hidden');
+      }
+    }
+    function hideWalletError() {
+      const err = document.getElementById('wallet-error');
+      if (err) err.classList.add('hidden');
+    }
+
+    // =============== START / STOP ===============
+    async function startBackendMining() {
+      const wallet = document.getElementById('wallet-input').value.trim();
+      hideWalletError();
+      if (!wallet) { showWalletError('Please enter a wallet address'); return; }
+      if (!isValidDogeAddress(wallet)) { showWalletError('Invalid Dogecoin wallet address format.'); return; }
+
+      readPoolInputs();
+
+      let workersInput = document.getElementById('workers-input');
+      if (!workersInput || !workersInput.offsetParent) workersInput = document.getElementById('setup-workers-input');
+      let workers = null;
+      if (workersInput && workersInput.value) {
+        workers = parseInt(workersInput.value, 10);
+        if (isNaN(workers) || workers < 1) workers = null;
+      }
+
+      try {
+        if (state && state.running) {
+          log('Reconfiguring active session (restart with new settings)…', 'info');
+        }
+        window.lastLoggedShares = 0;
+        window.lastLoggedRejects = 0;
+        lastSeenBackendLogId = 0;
+
+        const payload = { wallet, mode: backendMode };
+        if (workers) payload.workers = workers;
+        if (currentPoolId === 'custom') {
+          if (!customPoolHost) { showToast('Pool config', 'Enter a custom stratum host or pick a preset', '#ef4444'); return; }
+          payload.pool_host = customPoolHost;
+          if (customPoolPort) payload.pool_port = customPoolPort;
+        } else {
+          payload.pool_id = currentPoolId;
+        }
+        if (currentPoolUser) payload.pool_user = currentPoolUser;
+        if (currentPoolPass) payload.pool_pass = currentPoolPass;
+
+        log(`Starting ${backendMode.toUpperCase()} mining (${workers || 'auto'} workers, pool ${currentPoolId})…`, 'info');
+        const aw = document.getElementById('active-wallet');
+        if (aw) aw.textContent = wallet;
+        setMiningPhase('active');
+
+        const response = await fetch(`${BACKEND_URL}/api/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          const errText = await response.text().catch(() => '');
+          if (response.status === 400) throw new Error('Invalid wallet: ' + (errText || 'bad address format'));
+          throw new Error('Failed to start backend miner');
+        }
+
+        const result = await response.json();
+        hideWalletError();
+        log(`Mining started on ${result.pool} as ${result.pool_user}`, 'block');
+        try { localStorage.setItem('doge-wallet', wallet); } catch(e){}
+
+        const titleBar = document.getElementById('mining-title');
+        if (titleBar) {
+          titleBar.innerHTML = `MINING TO <span id="active-wallet" class="font-mono text-[#f0b90b] break-all">${esc(wallet)}</span>`;
+        }
+
+        const mp = document.getElementById('mining-panel');
+        if (mp) void mp.offsetWidth;
+        setTimeout(() => {
+          ensureChartSize();
+          drawHashrateChart();
+          drawCpuChart();
+          drawGpuChart();
+        }, 250);
+
+        if (statsInterval) clearInterval(statsInterval);
+        statsInterval = setInterval(fetchAndUpdateStats, 1200);
+        setTimeout(fetchAndUpdateStats, 300);
+
+      } catch (e) {
+        console.error(e);
+        setMiningPhase('setup');
+        const msg = (e && e.message) || '';
+        if (msg.toLowerCase().includes('invalid wallet') || msg.toLowerCase().includes('bad address')) {
+          showWalletError('Invalid Dogecoin wallet address. Please fix and try again.');
+        } else {
+          showToast('Backend unavailable', 'Check that the server is running (start script / docker)', '#ef4444');
+          log('Could not reach backend (see console for details)', 'info');
+        }
+      }
+    }
+
+    async function stopBackendMining() {
+      try {
+        await fetch(`${BACKEND_URL}/api/stop`, { method: 'POST' });
+      } catch(e) {}
+      log('Mining stopped', 'info');
+      if (state) state.running = false;
+      setMiningPhase('stopped');
+      const cpuP = document.getElementById('cpu-percent'); if (cpuP) cpuP.textContent = '0.0%';
+      const gpuP = document.getElementById('gpu-percent'); if (gpuP) gpuP.textContent = '0.0%';
+    }
+
+    function newSession() {
+      try { stopBackendMining(); } catch(e) {}
+      chartPoints = [];
+      if (state) { state.cpuHistory = []; state.gpuHistory = []; state.peakHashrate = 0; }
+      window.lastLoggedShares = 0;
+      window.lastLoggedRejects = 0;
+      const c = document.getElementById('hashrate-chart');
+      if (c && hashrateChartCtx) hashrateChartCtx.clearRect(0, 0, c.width, c.height);
+      setMiningPhase('setup');
+    }
+
+    // =============== STATS POLLING ===============
+    async function fetchAndUpdateStats() {
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/stats`);
+        if (!res.ok) {
+          log('stats poll failed (backend?)', 'info');
+          return;
+        }
+        const data = await res.json();
+
+        // backend stdout -> live feed (dedup by monotonically increasing id; ids reset on restart)
+        if (data.backend_logs && Array.isArray(data.backend_logs)) {
+          for (const entry of data.backend_logs) {
+            if (entry && typeof entry.id === 'number' && entry.id !== lastSeenBackendLogId) {
+              if (entry.id > lastSeenBackendLogId || entry.id < lastSeenBackendLogId - 50) {
+                log(entry.msg || '', 'backend');
+                lastSeenBackendLogId = entry.id;
+              }
+            }
+          }
+        }
+
+        const hv = document.getElementById('hashrate-value');
+        if (hv) hv.textContent = (data.hashrate_khs || 0).toFixed(2);
+        const sa = document.getElementById('shares-accepted'); if (sa) sa.textContent = data.shares_accepted || 0;
+        const sr = document.getElementById('shares-rejected'); if (sr) sr.textContent = data.shares_rejected || 0;
+        const ss = document.getElementById('shares-submitted'); if (ss) ss.textContent = data.shares_submitted || 0;
+
+        // share accept/reject feed + sounds
+        if (typeof window.lastLoggedShares === 'undefined') window.lastLoggedShares = 0;
+        if (typeof window.lastLoggedRejects === 'undefined') window.lastLoggedRejects = 0;
+        const acc = data.shares_accepted || 0;
+        if (acc > window.lastLoggedShares) {
+          log(`+${acc - window.lastLoggedShares} share(s) accepted by pool`, 'accepted');
+          playBeep('share');
+          window.lastLoggedShares = acc;
+        }
+        const rej = data.shares_rejected || 0;
+        if (rej > window.lastLoggedRejects) {
+          playBeep('reject');
+          window.lastLoggedRejects = rej;
+        }
+
+        const th = document.getElementById('total-hashes'); if (th) th.textContent = formatNumber(data.total_hashes || 0);
+        const bs = document.getElementById('best-share');
+        if (bs) bs.textContent = (data.best_share_diff || 0) >= 1 ? (data.best_share_diff).toFixed(2) : (data.best_share_diff || 0).toFixed(5);
+
+        // wallet balance with live price
+        const balance = (typeof data.wallet_balance === 'number') ? data.wallet_balance : 0;
+        const de = document.getElementById('doge-earned'); if (de) de.textContent = balance.toFixed(6);
+        const usdEl = document.getElementById('usd-earned');
+        if (usdEl) usdEl.textContent = (balance * (livePrice || 0)).toFixed(2);
+
+        const upEl = document.getElementById('uptime');
+        if (upEl) upEl.textContent = formatUptime(data.uptime_seconds);
+
+        const wid = document.getElementById('worker-id');
+        if (wid) wid.textContent = esc(data.description || '');
+
+        const titleBar = document.getElementById('mining-title');
+        if (titleBar && data.wallet && data.running) {
+          titleBar.innerHTML = `MINING TO <span id="active-wallet" class="font-mono text-[#f0b90b] break-all">${esc(data.wallet)}</span> <span class="text-sm text-emerald-400 ml-2">(${esc(data.description || '')})</span>`;
+        } else if (titleBar && data.running === false && state.running === false) {
+          titleBar.innerHTML = `MINING STOPPED <span class="text-sm text-slate-400 ml-2">(START to resume)</span>`;
+        }
+
+        // peak + trend chip
+        if (typeof data.hashrate_khs === 'number') {
+          if (!state.peakHashrate || data.hashrate_khs > state.peakHashrate) {
+            state.peakHashrate = data.hashrate_khs;
+            const pk = document.getElementById('hashrate-peak');
+            if (pk) pk.textContent = state.peakHashrate.toFixed(2);
+          }
+          const chip = document.getElementById('hashrate-diff');
+          if (chip) {
+            const prev = state.lastHashrate || 0;
+            let pct = 0;
+            if (prev > 0.001) pct = ((data.hashrate_khs - prev) / prev) * 100;
+            chip.textContent = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%';
+            chip.className = 'text-xs px-2 py-0.5 rounded-full inline-block ' +
+              (pct >= 0 ? 'bg-emerald-900/40 text-emerald-400' : 'bg-red-900/40 text-red-400');
+          }
+          state.lastHashrate = data.hashrate_khs;
+        }
+
+        // efficiency bar under shares
+        const spb = document.getElementById('share-progress');
+        if (spb) spb.style.width = Math.max(2, Math.min(100, data.efficiency || 100)) + '%';
+
+        // nerd mode (mining side)
+        const ns = document.getElementById('nonces-searched'); if (ns) ns.textContent = formatNumber(data.total_hashes || 0);
+        const thd = document.getElementById('threads'); if (thd) thd.textContent = data.worker_count || 1;
+        const tgt = document.getElementById('target-hex');
+        if (tgt && data.pool_target) tgt.textContent = data.pool_target.replace(/^(0{0,12})/, '$1').slice(0, 24) + '…';
+        const pd = document.getElementById('pool-diff'); if (pd) pd.textContent = data.pool_difficulty || '—';
+        const lh = document.getElementById('last-hash');
+        if (lh && data.last_share_hash) lh.textContent = data.last_share_hash.slice(0, 24) + '…';
+        const mb = document.getElementById('mine-backend');
+        if (mb) {
+          if (data.mode === 'gpu' && data.gpu_backend === 'opencl') mb.textContent = 'OpenCL: ' + ((data.gpu_devices || [])[0] || 'GPU');
+          else if (data.mode === 'gpu') mb.textContent = 'GPU mode (CPU fallback)';
+          else mb.textContent = 'CPU threads (hashlib.scrypt)';
+        }
+        const gpuNote = document.getElementById('gpu-panel-note');
+        if (gpuNote) {
+          if (data.gpu_backend === 'opencl') gpuNote.textContent = 'mining on ' + ((data.gpu_devices || [])[0] || 'OpenCL device');
+          else gpuNote.textContent = 'real (nvidia-smi; 0% without NVIDIA tools)';
+        }
+
+        // pool status line
+        const pi = document.getElementById('pool-info');
+        if (pi) {
+          const status = data.pool_connected ? (data.pool_authorized ? '🟢 CONNECTED+AUTHORIZED' : '🟡 CONNECTED') : '🔴 DISCONNECTED';
+          const job = data.has_job ? ' • job live' : '';
+          const err = (!data.pool_connected && data.pool_error) ? ` • ${esc(data.pool_error)}` : '';
+          const link = data.pool_link ? ` <a href="${esc(data.pool_link)}" target="_blank" rel="noopener" class="underline hover:text-[#f0b90b]">[pool stats]</a>` : '';
+          pi.innerHTML = `${status} ${esc(data.pool_host)}:${data.pool_port} as ${esc(data.pool_user || '')}${job}${err}${link}`;
+        }
+
+        // effort datapoints (all real)
+        applyEffortStats(data);
+
+        // charts
+        chartPoints.push({ t: Date.now(), h: (data.hashrate_khs || 0) });
+        if (chartPoints.length > 240) chartPoints.shift();
+        drawHashrateChart();
+
+        const wasRunning = state && state.running;
+        if (state) state.running = !!data.running;
+        updateMiningButtons(!!data.running);
+        if (state && !state.running && wasRunning) setMiningPhase('stopped');
+
+        const cpuVal = (typeof data.cpu_percent === 'number') ? data.cpu_percent : 0;
+        const gpuVal = (typeof data.gpu_percent === 'number') ? data.gpu_percent : 0;
+        const memVal = (typeof data.mem_percent === 'number') ? data.mem_percent : 0;
+        const cpuPctEl = document.getElementById('cpu-percent'); if (cpuPctEl) cpuPctEl.textContent = cpuVal.toFixed(1) + '%';
+        const gpuPctEl = document.getElementById('gpu-percent'); if (gpuPctEl) gpuPctEl.textContent = gpuVal.toFixed(1) + '%';
+        const memEl = document.getElementById('mem-used'); if (memEl) memEl.textContent = memVal.toFixed(0) + '%';
+        const cpuLoadEl = document.getElementById('cpu-load'); if (cpuLoadEl) cpuLoadEl.textContent = cpuVal.toFixed(0) + '%';
+        const gpuLoadEl = document.getElementById('gpu-load'); if (gpuLoadEl) gpuLoadEl.textContent = gpuVal.toFixed(0) + '%';
+
+        if (state) {
+          state.cpuHistory.push({ t: Date.now(), v: cpuVal });
+          state.gpuHistory.push({ t: Date.now(), v: gpuVal });
+          if (state.cpuHistory.length > 220) state.cpuHistory.shift();
+          if (state.gpuHistory.length > 220) state.gpuHistory.shift();
+          drawCpuChart();
+          drawGpuChart();
+        }
+      } catch (e) {
+        console.log('Backend stats fetch failed (is server running?)', e);
+      }
+    }
+
+    function applyEffortStats(data) {
+      var ep = document.getElementById('effort-percent'); if (ep) ep.textContent = (data.effort_percent || 0).toFixed(1) + '%';
+      var en = document.getElementById('current-nonce'); if (en) en.textContent = data.current_nonce || '0x00000000';
+      var et = document.getElementById('effort-text'); if (et) et.textContent = data.effort_text || 'SEARCHING';
+      var eb = document.getElementById('effort-bar'); if (eb) eb.style.width = (data.effort_percent || 0) + '%';
+      var lk = document.getElementById('luck-stat'); if (lk) lk.textContent = (data.luck || 100).toFixed(1) + '%';
+      var sk = document.getElementById('streak-stat'); if (sk) sk.textContent = (data.streak || 0);
+      var ef = document.getElementById('efficiency-stat'); if (ef) ef.textContent = (data.efficiency || 100).toFixed(1) + '%';
+    }
+
+    function copyNerdStats() {
+      const ids = ['block-height','net-difficulty','target-hex','last-hash','nonces-searched','threads','mem-used','cpu-load','gpu-load','mine-backend'];
+      const parts = ids.map(id => { const el = document.getElementById(id); return id + '=' + (el ? el.textContent : '?'); });
+      try { navigator.clipboard.writeText(parts.join(' | ')); showToast('Copied', 'nerd stats in clipboard'); } catch(e) {}
+    }
+
+    // =============== BLOCKCHAIN EXPLORER ===============
+    async function fetchChainSummary() {
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/chain/summary`);
+        if (!res.ok) return;
+        const s = await res.json();
+        livePrice = s.price_usd || livePrice;
+        const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+        set('chain-height', (s.height || 0).toLocaleString());
+        set('chain-difficulty', formatNumber(s.difficulty || 0, 2));
+        set('chain-hashrate', s.network_hashrate_hs ? formatNumber(s.network_hashrate_hs, 2) + 'H/s' : '—');
+        set('chain-price', '$' + (s.price_usd || 0).toFixed(5));
+        set('chain-mempool', (s.mempool_transactions || 0).toLocaleString());
+        set('chain-blocks24', (s.blocks_24h || 0).toLocaleString());
+        set('chain-source', (s.source || '—') + (s.stale ? ' (stale)' : ''));
+        set('top-price', (s.price_usd || 0).toFixed(5));
+        const chg = document.getElementById('top-price-change');
+        if (chg) {
+          const c = s.price_usd_24h_change || 0;
+          chg.textContent = (c >= 0 ? '▲' : '▼') + Math.abs(c).toFixed(2) + '%';
+          chg.className = c >= 0 ? 'text-emerald-400' : 'text-red-400';
+        }
+        // nerd mode mirrors
+        set('block-height', (s.height || 0).toLocaleString());
+        set('net-difficulty', formatNumber(s.difficulty || 0, 2));
+        const dp = document.getElementById('doge-price'); if (dp) dp.textContent = (s.price_usd || 0).toFixed(5);
+      } catch (e) {}
+    }
+
+    async function fetchRecentBlocks() {
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/chain/blocks?limit=8`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const body = document.getElementById('chain-blocks-body');
+        if (!body || !data.blocks) return;
+        body.innerHTML = data.blocks.map(b => {
+          let t = b.time || '';
+          if (/^\d+$/.test(String(t))) t = new Date(Number(t) * 1000).toISOString();
+          t = String(t).replace('T', ' ').replace(/\..*$/, '').replace(/\+.*$/, '').slice(5, 16);
+          return `<tr>
+            <td class="text-[#f0b90b]">${(b.height || 0).toLocaleString()}</td>
+            <td class="text-slate-400">${esc(t)}</td>
+            <td>${b.tx_count || 0}</td>
+            <td class="text-slate-500">${formatNumber(b.size || 0, 1)}B</td>
+            <td class="text-slate-500">${esc((b.hash || '').slice(0, 16))}…</td>
+          </tr>`;
+        }).join('');
+      } catch (e) {}
+    }
+
+    async function lookupAddress() {
+      const inp = document.getElementById('explore-addr-input');
+      const out = document.getElementById('explore-result');
+      if (!inp || !out) return;
+      const addr = inp.value.trim();
+      if (!isValidDogeAddress(addr)) {
+        out.innerHTML = '<span class="text-red-400">Invalid Dogecoin address format.</span>';
+        return;
+      }
+      out.textContent = 'Loading…';
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/chain/address/${encodeURIComponent(addr)}`);
+        if (!res.ok) {
+          out.innerHTML = '<span class="text-red-400">Lookup failed (providers unavailable — try again shortly).</span>';
+          return;
+        }
+        const a = await res.json();
+        const txs = (a.recent_txids || []).slice(0, 5).map(t =>
+          `<div class="text-slate-500 break-all">↳ ${esc(t)}</div>`).join('');
+        out.innerHTML = `
+          <div class="grid grid-cols-2 gap-2 mb-2">
+            <div><span class="nerd-label">BALANCE</span><br><span class="text-[#f0b90b] text-base">${(a.balance_doge || 0).toLocaleString()} Ð</span>
+              <span class="text-slate-500">($${((a.balance_doge || 0) * (livePrice || 0)).toFixed(2)})</span></div>
+            <div><span class="nerd-label">TRANSACTIONS</span><br><span class="text-base">${(a.tx_count || 0).toLocaleString()}</span></div>
+            <div><span class="nerd-label">RECEIVED</span><br>${(a.received_doge || 0).toLocaleString()} Ð</div>
+            <div><span class="nerd-label">SPENT</span><br>${(a.spent_doge || 0).toLocaleString()} Ð</div>
+          </div>
+          ${txs ? '<div class="nerd-label mb-1">RECENT TXIDS</div>' + txs : ''}
+          <div class="text-slate-600 mt-1">source: ${esc(a.source || '?')}${a.stale ? ' (stale)' : ''}</div>`;
+      } catch (e) {
+        out.innerHTML = '<span class="text-red-400">Lookup failed.</span>';
+      }
+    }
+
+    // =============== CHARTS ===============
+    function initializeChart() {
+      var canvas = document.getElementById("hashrate-chart");
+      if (!canvas) return;
+      hashrateChartCtx = canvas.getContext("2d");
+      canvas.width = 300;
+      canvas.height = 90;
+    }
+
+    function chartDisplayWidth(clientWidth, fallback, minW, maxW) {
+      var w = clientWidth || fallback;
+      return Math.max(minW, Math.min(w, maxW));
+    }
+
+    function ensureChartSize() {
+      var canvas = document.getElementById("hashrate-chart");
+      if (!canvas) return;
+      var container = canvas.parentElement;
+      if (!container) return;
+      canvas.style.width = '100%';
+      canvas.style.height = '90px';
+      canvas.style.maxWidth = '100%';
+      var displayW = chartDisplayWidth(container.clientWidth, 300, 50, 1200);
+      var displayH = 90;
+      if (canvas.width !== displayW) canvas.width = Math.floor(displayW);
+      if (canvas.height !== displayH) canvas.height = displayH;
+      if (!hashrateChartCtx) hashrateChartCtx = canvas.getContext("2d");
+    }
+
+    function drawHashrateChart() {
+      if (!hashrateChartCtx) return;
+      const canvas = document.getElementById("hashrate-chart");
+      if (!canvas) return;
+      ensureChartSize();
+      const ctx = hashrateChartCtx;
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+      const hist = chartPoints || [];
+      if (hist.length < 2) {
+        ctx.strokeStyle = 'rgba(240,185,11,0.3)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, h * 0.7);
+        ctx.lineTo(w, h * 0.7);
+        ctx.stroke();
+        return;
+      }
+      const vals = hist.map(p => p.h || 0);
+      let maxH = Math.max(1, ...vals) * 1.2;
+      ctx.strokeStyle = 'rgba(42,42,51,0.6)';
+      ctx.lineWidth = 1;
+      for (let i = 1; i < 4; i++) {
+        const gy = (h / 4) * i;
+        ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(w, gy); ctx.stroke();
+      }
+      ctx.strokeStyle = '#f0b90b';
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = 'rgba(240,185,11,0.4)';
+      ctx.shadowBlur = 4;
+      ctx.beginPath();
+      for (let i = 0; i < hist.length; i++) {
+        const x = (i / (hist.length - 1)) * w;
+        const y = h - ((hist[i].h) / maxH) * (h - 4);
+        if (i === 0) ctx.moveTo(x, Math.max(2, Math.min(h-2, y)));
+        else ctx.lineTo(x, Math.max(2, Math.min(h-2, y)));
+      }
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.lineTo(w, h);
+      ctx.lineTo(0, h);
+      ctx.fillStyle = 'rgba(240, 185, 11, 0.12)';
+      ctx.fill();
+      const last = hist[hist.length-1];
+      const ly = h - ((last.h) / maxH) * (h - 4);
+      ctx.fillStyle = '#f0b90b';
+      ctx.beginPath();
+      ctx.arc(w-1, Math.max(3, Math.min(h-3, ly)), 2.5, 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    function ensureSmallChartSize(canvasId) {
+      var canvas = document.getElementById(canvasId);
+      if (!canvas) return null;
+      var container = canvas.parentElement;
+      canvas.style.width = '100%';
+      canvas.style.height = '80px';
+      canvas.style.maxWidth = '100%';
+      var w = chartDisplayWidth(container ? container.clientWidth : 280, 280, 50, 600);
+      var h = 80;
+      if (canvas.width !== w) canvas.width = Math.floor(w);
+      if (canvas.height !== h) canvas.height = h;
+      return canvas.getContext('2d');
+    }
+
+    function drawUtilChart(canvasId, history, color, maxVal = 100) {
+      const ctx = ensureSmallChartSize(canvasId);
+      if (!ctx) return;
+      const canvas = document.getElementById(canvasId);
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+      const hist = history || [];
+      ctx.strokeStyle = 'rgba(42,42,51,0.4)';
+      ctx.lineWidth = 1;
+      for (let i = 1; i < 3; i++) {
+        const gy = (h / 3) * i;
+        ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(w, gy); ctx.stroke();
+      }
+      if (hist.length > 0) {
+        const vals = hist.map(p => p.v || 0);
+        const dataMax = Math.max(0, ...vals);
+        const maxV = Math.max(maxVal * 0.2, dataMax * 1.35 || 5, 10);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2.5;
+        ctx.shadowBlur = 2;
+        ctx.shadowColor = color;
+        ctx.beginPath();
+        for (let i = 0; i < hist.length; i++) {
+          const x = (i / Math.max(1, hist.length - 1)) * w;
+          const y = h - (Math.min(hist[i].v, maxV) / maxV) * (h - 4);
+          if (i === 0) ctx.moveTo(x, Math.max(3, Math.min(h-3, y)));
+          else ctx.lineTo(x, Math.max(3, Math.min(h-3, y)));
+        }
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.lineTo(w, h);
+        ctx.lineTo(0, h);
+        ctx.fillStyle = (color.startsWith('#') ? color + '20' : 'rgba(148,163,184,0.12)');
+        ctx.fill();
+      } else {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(0, h * 0.7);
+        ctx.lineTo(w, h * 0.7);
+        ctx.stroke();
+      }
+      const cvs = document.getElementById(canvasId);
+      if (cvs) cvs.setAttribute('data-last-paint', Date.now().toString());
+    }
+
+    function drawCpuChart() { drawUtilChart('cpu-chart', state.cpuHistory || [], '#22c55e'); }
+    function drawGpuChart() { drawUtilChart('gpu-chart', state.gpuHistory || [], '#f59e0b'); }
+
+    // =============== KEYBOARD ===============
+    function setupKeyboard() {
+      document.addEventListener("keydown", function(e) {
+        if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+        if (e.key === " " || e.key === "Spacebar") {
+          e.preventDefault();
+          if (state.running) stopBackendMining();
+          else { const inp = document.getElementById("wallet-input"); if (inp) inp.focus(); }
+        }
+        if (e.key.toLowerCase() === "s") {
+          e.preventDefault();
+          const inp = document.getElementById("wallet-input");
+          if (inp && inp.value.trim()) startBackendMining();
+          else if (inp) inp.focus();
+        }
+      });
+    }
+
+    // =============== INIT ===============
+    async function restoreRunningSession() {
+      // If the backend is already mining (page refresh), reflect it instead of showing setup
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/stats`);
+        if (!res.ok) return;
+        const s = await res.json();
+        if (s.running) {
+          state.running = true;
+          backendMode = s.mode || 'cpu';
+          setMiningMode(backendMode);
+          const aw = document.getElementById('active-wallet');
+          if (aw) aw.textContent = s.wallet || '';
+          setMiningPhase('active');
+          if (statsInterval) clearInterval(statsInterval);
+          statsInterval = setInterval(fetchAndUpdateStats, 1200);
+          fetchAndUpdateStats();
+          log('Restored running mining session from backend', 'info');
+        }
+      } catch(e) {}
+    }
+
+    function init() {
+      // restore persisted config
+      try {
+        const savedW = localStorage.getItem('doge-wallet');
+        if (savedW) document.getElementById('wallet-input').value = savedW;
+        currentPoolId = localStorage.getItem('doge-pool-id') || 'zpool';
+        currentPoolUser = localStorage.getItem('doge-pool-user') || '';
+        currentPoolPass = localStorage.getItem('doge-pool-pass') || '';
+        customPoolHost = localStorage.getItem('doge-pool-host') || '';
+        const sp = parseInt(localStorage.getItem('doge-pool-port') || '', 10);
+        if (!isNaN(sp) && sp > 0) customPoolPort = sp;
+      } catch(e){}
+
+      document.getElementById("wallet-input").addEventListener("keyup", function(ev) {
+        if (ev.key === "Enter") startBackendMining();
+      });
+      document.getElementById("wallet-input").addEventListener("input", hideWalletError);
+      document.getElementById("explore-addr-input").addEventListener("keyup", function(ev) {
+        if (ev.key === "Enter") lookupAddress();
+      });
+
+      initializeChart();
+      setupKeyboard();
+      setMiningMode('cpu');
+      updateMiningButtons(false);
+
+      ['workers-input', 'setup-workers-input'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.addEventListener('change', () => {
+            if (state && state.running) {
+              setTimeout(() => { if (state && state.running) startBackendMining(); }, 50);
+            }
+          });
+        }
+      });
+
+      console.log("%c[DOGE MINER] Real scrypt pool miner ready (CPU + OpenCL GPU).", "color:#f0b90b");
+      log('System ready. Pick a pool (zpool needs no signup) and START.', 'info');
+
+      loadPools();
+      restoreRunningSession();
+      fetchChainSummary();
+      fetchRecentBlocks();
+      chainInterval = setInterval(() => {
+        fetchChainSummary();
+        fetchRecentBlocks();
+      }, 60000);
+
+      window.addEventListener('resize', function() {
+        ensureChartSize();
+        drawHashrateChart();
+        drawCpuChart();
+        drawGpuChart();
+      });
+
+      setInterval(() => {
+        const mp = document.getElementById('mining-panel');
+        if (mp && !mp.classList.contains('hidden')) {
+          drawHashrateChart();
+          drawCpuChart();
+          drawGpuChart();
+        }
+      }, 4500);
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  </script>
+</body>
+</html>

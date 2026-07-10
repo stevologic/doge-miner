@@ -1,0 +1,5 @@
+# Optional GPU mining support (OpenCL). Safe to skip: the miner falls back to CPU
+# threads and reports gpu_backend="cpu-fallback" honestly.
+# Requires an OpenCL runtime from your GPU driver (NVIDIA/AMD/Intel; Win/mac/Linux).
+pyopencl
+numpy

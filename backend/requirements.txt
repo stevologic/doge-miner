@@ -1,0 +1,5 @@
+fastapi
+uvicorn[standard]
+psutil
+# Scrypt PoW uses stdlib hashlib.scrypt (OpenSSL) — no extra dependency needed.
+# GPU mining extras live in requirements-gpu.txt (optional; CPU works without them).

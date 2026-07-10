@@ -1,0 +1,28 @@
+services:
+  doge-miner-backend:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      # Optional: override the default pool used before any UI config
+      # - POOL_HOST=scrypt.mine.zpool.ca
+      # - POOL_PORT=3433
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request, json, sys; r=json.loads(urllib.request.urlopen('http://localhost:8000/api/health', timeout=3).read()); sys.exit(0 if r.get('status')=='ok' else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    # GPU mining in Docker additionally needs the NVIDIA Container Toolkit and an
+    # OpenCL ICD inside the image; without them the miner falls back to CPU.
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+    # IMPORTANT: never mount your source over /app (e.g. - .:/app) when using the
+    # pre-built image — it replaces the packaged code.
