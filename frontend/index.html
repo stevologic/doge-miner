@@ -547,8 +547,8 @@
             </div>
           </div>
         </div>
-        <!-- LIVE FEED -->
-        <div class="mining-panel rounded-3xl overflow-hidden flex flex-col min-h-[160px] sm:min-h-[200px] lg:min-h-[260px]">
+        <!-- LIVE FEED (capped height; content auto-scrolls, pinned to newest) -->
+        <div class="mining-panel rounded-3xl overflow-hidden flex flex-col min-h-[160px] sm:min-h-[200px] lg:min-h-[260px] max-h-[260px] sm:max-h-[300px] lg:max-h-[380px]">
           <div class="terminal-header px-4 py-1 flex items-center justify-between text-xs flex-shrink-0">
             <span class="font-semibold">LIVE FEED (backend + UI)</span>
             <div class="flex gap-x-2 text-[10px]">
@@ -749,15 +749,16 @@
     }
 
     function renderFeed() {
+      const cont = document.getElementById("log-container");
+      if (!cont) return;
+      // stick to the newest line unless the user has scrolled up to read history
+      const pinned = cont.scrollHeight - cont.scrollTop - cont.clientHeight < 48;
       const htmls = feedBuffer.map(entry => {
         const [ts, msg, typ] = entry;
         return `<div class="log-line px-2 py-0.5 ${typ}"><span class="text-[#64748b] text-[10px]">${ts}</span> ${esc(msg)}</div>`;
       }).join('');
-      const cont = document.getElementById("log-container");
-      if (cont) {
-        cont.innerHTML = htmls;
-        cont.scrollTop = cont.scrollHeight;
-      }
+      cont.innerHTML = htmls;
+      if (pinned) cont.scrollTop = cont.scrollHeight;
     }
 
     function log(msg, type = "info") {
