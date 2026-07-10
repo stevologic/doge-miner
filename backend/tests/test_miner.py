@@ -604,3 +604,47 @@ class TestVerboseLogging(unittest.TestCase):
             time.sleep(0.05)
         m.stop()
         self.assertTrue(found, "worker must emit a verbose mining.submit wire log")
+
+
+class TestPoolRobustness(unittest.TestCase):
+    def test_client_get_version_is_answered(self):
+        m = DogeMiner()
+        q = QueuedStratumSocket()
+        m.sock = q
+        m._handle_stratum({"id": 7, "method": "client.get_version", "params": []})
+        sent = b"".join(q.sent)
+        self.assertIn(b'"id": 7', sent)
+        self.assertIn(b"doge-miner-fullstack", sent)
+
+    def test_authorize_result_false_sets_pool_error(self):
+        m = DogeMiner()
+        m._handle_stratum({"id": 2, "result": False, "error": None})
+        self.assertIn("authorize rejected", m.pool_error)
+        self.assertFalse(m.authorized)
+        # a later successful authorize clears the error
+        m._handle_stratum({"id": 2, "result": True})
+        self.assertTrue(m.authorized)
+        self.assertEqual(m.pool_error, "")
+
+    def test_silent_authorize_triggers_watchdog_warning(self):
+        """Pools like litecoinpool never answer a failed authorize; after the grace
+        period the watchdog must surface it instead of leaving the user guessing."""
+        m = DogeMiner()
+        q = QueuedStratumSocket()
+        # pool subscribes + sends a job but never confirms authorization
+        q.push(b'{"id":1,"result":[[], "abcd", 4]}\n')
+        q.push(b'{"id":null,"method":"mining.set_difficulty","params":[1024]}\n')
+        q.push(b'{"id":null,"method":"mining.notify","params":["j1","0000000000000000000000000000000000000000000000000000000000000000","01","02",[],"00000001","1d00ffff","5e0e0e0e",true]}\n')
+        m.socket_factory = lambda *a, **k: q
+        m.auth_grace_seconds = 0.5
+        m.start("DSilentAuth", "cpu", workers=1)
+        deadline = time.time() + 8
+        warned = False
+        while time.time() < deadline:
+            if "authorization" in m.pool_error:
+                warned = True
+                break
+            time.sleep(0.2)
+        m.stop()
+        self.assertTrue(warned, "watchdog must flag unconfirmed authorization")
+        self.assertIn("check pool username/worker", m.pool_error)

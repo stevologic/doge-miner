@@ -1365,7 +1365,7 @@
           parts.push(seg(esc(data.pool_host) + ':' + data.pool_port));
           if (data.pool_user) parts.push(`<span>as <span class="break-all">${esc(data.pool_user)}</span></span>`);
           if (data.has_job) parts.push(seg('• job live'));
-          if (!data.pool_connected && data.pool_error) parts.push(`<span class="break-words">• ${esc(data.pool_error)}</span>`);
+          if (data.pool_error) parts.push(`<span class="break-words text-amber-400">• ${esc(data.pool_error)}</span>`);
           if (data.pool_link) parts.push(seg(`<a href="${esc(data.pool_link)}" target="_blank" rel="noopener" class="underline hover:text-[#f0b90b]">[pool stats]</a>`));
           if (data.worker_link) parts.push(seg(`<a href="${esc(data.worker_link)}" target="_blank" rel="noopener" class="underline hover:text-[#f0b90b]" title="Per-worker detail from the pool (live miners, balances, payouts)">[worker stats]</a>`));
           pi.innerHTML = parts.join(' ');

@@ -340,6 +340,11 @@ class DogeMiner:
         self.job_lock = threading.Lock()
         self.send_lock = threading.Lock()
         self._connect_lock = threading.Lock()  # protect concurrent _connect_pool calls (start + watchdog)
+        # authorization watchdog: warn when a pool silently ignores a bad username
+        # (litecoinpool, for example, never answers a failed mining.authorize)
+        self.auth_grace_seconds = 15.0
+        self._connected_at = 0.0
+        self._auth_warned = False
 
         # GPU backend state (real OpenCL when available; honest fallback otherwise)
         self.gpu = None                # ScryptGPU instance when active
@@ -900,6 +905,8 @@ class DogeMiner:
                     self.authorized = False
                     self.current_job = None
                     self.pool_error = ""
+                    self._connected_at = time.time()
+                    self._auth_warned = False
 
                     # subscribe
                     sub = self._format_subscribe()
@@ -971,10 +978,20 @@ class DogeMiner:
         # let the persistent reconnect watchdog recover; do not nest connect calls here
 
     def _reconnect_loop(self):
-        """Persistent watchdog: while miner running, periodically ensure we are connected."""
+        """Persistent watchdog: while miner running, periodically ensure we are connected,
+        and flag pools that silently never confirm authorization (bad username/worker)."""
         while self.running and not self._stop_event.is_set():
             if not self.connected:
                 self._connect_pool()
+            if (self.connected and not self.authorized and not self._auth_warned
+                    and self._connected_at
+                    and time.time() - self._connected_at > self.auth_grace_seconds):
+                self._auth_warned = True
+                self.pool_error = ("pool has not confirmed authorization — "
+                                   "check pool username/worker and password")
+                self._log("WARNING: pool has not confirmed authorization — shares may be "
+                          "discarded. Check your pool username/worker (registered pools need "
+                          "an account).")
             for _ in range(4):
                 if not self.running or self._stop_event.is_set():
                     return
@@ -1007,6 +1024,21 @@ class DogeMiner:
                 except (TypeError, ValueError, IndexError):
                     pass
                 self._log(f"← mining.set_extranonce {self.extranonce1}/{self.extranonce2_size}", verbose=True)
+            elif method == "client.get_version":
+                # some pools probe clients and may drop those that ignore the request
+                if msg.get("id") is not None:
+                    reply = json.dumps({"id": msg["id"], "result": "doge-miner-fullstack/2.0",
+                                        "error": None}) + "\n"
+                    with self.send_lock:
+                        if self.sock:
+                            try:
+                                self.sock.sendall(reply.encode())
+                            except (OSError, socket.error, AttributeError):
+                                pass
+                self._log("← client.get_version (answered)", verbose=True)
+            elif method == "client.show_message":
+                if params:
+                    self._log(f"pool message: {params[0]}")
             elif method == "client.reconnect":
                 self.connected = False  # watchdog reconnects
         elif "result" in msg or "error" in msg:
@@ -1014,10 +1046,11 @@ class DogeMiner:
             if msg.get("id") == 2:
                 if msg.get("result") is True:
                     self.authorized = True
+                    self.pool_error = ""
                     self._log("Pool authorized")
-                elif msg.get("error"):
-                    self.pool_error = f"authorize rejected: {msg.get('error')}"
-                    self._log(f"Pool authorize rejected: {msg.get('error')}")
+                elif msg.get("result") is False or msg.get("error"):
+                    self.pool_error = f"authorize rejected: {msg.get('error') or 'bad username/worker'}"
+                    self._log(f"Pool authorize rejected: {msg.get('error') or 'bad username/worker'}")
             if msg.get("id") == 4:  # submit response
                 if msg.get("result") is True:
                     with self.lock:
