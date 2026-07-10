@@ -1309,7 +1309,8 @@
           const job = data.has_job ? ' • job live' : '';
           const err = (!data.pool_connected && data.pool_error) ? ` • ${esc(data.pool_error)}` : '';
           const link = data.pool_link ? ` <a href="${esc(data.pool_link)}" target="_blank" rel="noopener" class="underline hover:text-[#f0b90b]">[pool stats]</a>` : '';
-          pi.innerHTML = `${status} ${esc(data.pool_host)}:${data.pool_port} as ${esc(data.pool_user || '')}${job}${err}${link}`;
+          const wlink = data.worker_link ? ` <a href="${esc(data.worker_link)}" target="_blank" rel="noopener" class="underline hover:text-[#f0b90b]" title="Per-worker detail from the pool (live miners, balances, payouts)">[worker stats]</a>` : '';
+          pi.innerHTML = `${status} ${esc(data.pool_host)}:${data.pool_port} as ${esc(data.pool_user || '')}${job}${err}${link}${wlink}`;
         }
 
         // effort datapoints (all real)

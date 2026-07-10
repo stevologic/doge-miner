@@ -162,6 +162,11 @@ class TestPools(unittest.TestCase):
         self.assertIsNone(get_pool("nope"))
         self.assertIsNone(get_pool(None))
 
+    def test_zpool_has_public_worker_stats(self):
+        z = get_pool("zpool")
+        self.assertIn("walletEx", z.get("worker_stats_url", ""))
+        self.assertIn("{user}", z.get("worker_stats_url", ""))
+
 
 class TestApiEndpoints(unittest.TestCase):
     @classmethod
@@ -227,8 +232,22 @@ class TestApiEndpoints(unittest.TestCase):
         self.assertEqual(s["pool_id"], "aikapool")
         self.assertIn("shares_submitted", s)
         self.assertIn("pool_target", s)
+        # aikapool has no public per-worker page -> no worker link
+        self.assertEqual(s["worker_link"], "")
         r = self.client.post("/api/stop")
         self.assertEqual(r.status_code, 200)
+
+    def test_worker_link_for_zpool(self):
+        wallet = "DTW2M5oEW97WbmYJRM71qD7uE6xfJs1MUK"
+        r = self.client.post("/api/start", json={
+            "wallet": wallet, "mode": "cpu", "workers": 1, "pool_id": "zpool",
+        })
+        self.assertEqual(r.status_code, 200)
+        s = self.client.get("/api/stats").json()
+        self.assertIn("walletEx", s["worker_link"])
+        self.assertIn(wallet, s["worker_link"])
+        self.assertIn(wallet, s["pool_link"])
+        self.client.post("/api/stop")
 
 
 if __name__ == "__main__":

@@ -52,6 +52,7 @@ class StatsResponse(BaseModel):
     uptime_seconds: int
     description: str
     pool_link: str
+    worker_link: str = ""
     wallet_balance: float = 0.0
     cpu_percent: float = 0.0
     mem_percent: float = 0.0
@@ -130,15 +131,19 @@ async def stop_mining():
 async def get_stats():
     stats = the_miner.get_stats()
 
-    # Pool stats link for the active preset (wallet-login pools link directly to the user)
+    # Pool stats link for the active preset (wallet-login pools link directly to the user);
+    # worker_link is the pool's per-worker detail page/API when it has a public one.
     preset = get_pool(stats.get("pool_id", ""))
     user = stats.get("pool_user") or stats.get("wallet") or ""
+    worker_link = ""
     if preset:
         pool_link = preset["stats_url"].replace("{user}", user)
+        if preset.get("worker_stats_url") and user:
+            worker_link = preset["worker_stats_url"].replace("{user}", user)
     else:
         pool_link = f"https://{stats.get('pool_host','')}"
 
-    return {**stats, "pool_link": pool_link}
+    return {**stats, "pool_link": pool_link, "worker_link": worker_link}
 
 @app.get("/api/pools")
 async def list_pools():

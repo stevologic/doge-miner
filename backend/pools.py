@@ -22,7 +22,9 @@ POOLS = [
         "password_hint": "c=DOGE selects the payout coin. Optional: d=N static difficulty, ID=rigname.",
         "payout": "Direct DOGE to your wallet (wallet-login multipool)",
         "web": "https://www.zpool.ca",
-        "stats_url": "https://www.zpool.ca/?address={user}",
+        "stats_url": "https://www.zpool.ca/wallet/{user}",
+        # per-worker detail (live miners array while mining, balances, payouts)
+        "worker_stats_url": "https://www.zpool.ca/api/walletEx?address={user}",
         "notes": "Multi-coin scrypt pool that mines DOGE directly. Just point a wallet at it.",
     },
     {
