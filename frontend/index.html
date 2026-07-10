@@ -64,6 +64,7 @@
     .log-line.info { border-left-color: #64748b; }
     .log-line.wow { border-left-color: #a78bfa; color: #c4b5fd; }
     .log-line.backend { border-left-color: #475569; color: #94a3b8; font-style: italic; }
+    .log-line.verbose { border-left-color: #334155; color: #64748b; }
 
     .stat-card {
       background: #111114;
@@ -564,6 +565,8 @@
           <div class="terminal-header px-4 py-1 flex items-center justify-between text-xs flex-shrink-0">
             <span class="font-semibold">LIVE FEED (backend + UI)</span>
             <div class="flex gap-x-2 text-[10px]">
+              <button id="verbose-btn" onclick="toggleVerbose()" class="px-2 py-px hover:bg-[#2a2a33] rounded text-slate-400"
+                      title="Show every request: stratum wire traffic, hash progress, GPU batches, chain provider + UI API calls">VERBOSE: OFF</button>
               <button onclick="clearLog()" class="px-2 py-px hover:bg-[#2a2a33] rounded text-slate-400">CLEAR</button>
               <button onclick="exportLog()" class="px-2 py-px hover:bg-[#2a2a33] rounded text-slate-400">EXPORT</button>
             </div>
@@ -717,7 +720,8 @@
     };
 
     let chartPoints = [];       // transient hashrate chart buffer (from /api/stats polls)
-    let feedBuffer = [];        // live feed lines
+    let feedBuffer = [];        // live feed lines: [ts, msg, type, isVerbose]
+    let verboseMode = false;    // VERBOSE toggle: show wire traffic + every request (persisted)
     let lastSeenBackendLogId = 0;
     let hashrateChartCtx = null;
     let statsInterval = null;
@@ -765,19 +769,57 @@
       if (!cont) return;
       // stick to the newest line unless the user has scrolled up to read history
       const pinned = cont.scrollHeight - cont.scrollTop - cont.clientHeight < 48;
-      const htmls = feedBuffer.map(entry => {
-        const [ts, msg, typ] = entry;
-        return `<div class="log-line px-2 py-0.5 ${typ}"><span class="text-[#64748b] text-[10px]">${ts}</span> ${esc(msg)}</div>`;
-      }).join('');
+      const htmls = feedBuffer
+        .filter(entry => verboseMode || !entry[3])
+        .map(entry => {
+          const [ts, msg, typ] = entry;
+          return `<div class="log-line px-2 py-0.5 ${typ}"><span class="text-[#64748b] text-[10px]">${ts}</span> ${esc(msg)}</div>`;
+        }).join('');
       cont.innerHTML = htmls;
       if (pinned) cont.scrollTop = cont.scrollHeight;
     }
 
-    function log(msg, type = "info") {
+    function log(msg, type = "info", isVerbose = false) {
       const ts = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
-      feedBuffer.push([ts, msg, type]);
-      while (feedBuffer.length > 60) feedBuffer.shift();
+      feedBuffer.push([ts, msg, type, isVerbose]);
+      while (feedBuffer.length > 250) feedBuffer.shift();
       renderFeed();
+    }
+
+    // verbose-only line (UI request telemetry; hidden unless VERBOSE is on)
+    function vlog(msg) { log(msg, 'verbose', true); }
+
+    function toggleVerbose() {
+      verboseMode = !verboseMode;
+      try { localStorage.setItem('doge-verbose', verboseMode ? '1' : '0'); } catch(e){}
+      updateVerboseButton();
+      log('verbose mode ' + (verboseMode
+        ? 'ON — showing stratum wire traffic, hash progress, GPU batches and every API request'
+        : 'OFF — showing key events only'), 'info');
+    }
+
+    function updateVerboseButton() {
+      const b = document.getElementById('verbose-btn');
+      if (!b) return;
+      b.textContent = 'VERBOSE: ' + (verboseMode ? 'ON' : 'OFF');
+      b.classList.toggle('text-[#f0b90b]', verboseMode);
+      b.classList.toggle('text-slate-400', !verboseMode);
+    }
+
+    // timing wrapper: fetch + verbose one-liner for every UI request
+    async function vfetch(url, opts) {
+      const t0 = performance.now();
+      try {
+        const res = await fetch(url, opts);
+        if (verboseMode) {
+          const method = (opts && opts.method) || 'GET';
+          vlog(`${method} ${url} ${res.status} (${Math.round(performance.now() - t0)} ms)`);
+        }
+        return res;
+      } catch (e) {
+        if (verboseMode) vlog(`${(opts && opts.method) || 'GET'} ${url} FAILED (${Math.round(performance.now() - t0)} ms)`);
+        throw e;
+      }
     }
 
     function clearLog() {
@@ -1123,7 +1165,7 @@
         if (aw) aw.textContent = wallet;
         setMiningPhase('active');
 
-        const response = await fetch(`${BACKEND_URL}/api/start`, {
+        const response = await vfetch(`${BACKEND_URL}/api/start`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -1173,7 +1215,7 @@
 
     async function stopBackendMining() {
       try {
-        await fetch(`${BACKEND_URL}/api/stop`, { method: 'POST' });
+        await vfetch(`${BACKEND_URL}/api/stop`, { method: 'POST' });
       } catch(e) {}
       log('Mining stopped', 'info');
       if (state) state.running = false;
@@ -1196,7 +1238,7 @@
     // =============== STATS POLLING ===============
     async function fetchAndUpdateStats() {
       try {
-        const res = await fetch(`${BACKEND_URL}/api/stats`);
+        const res = await vfetch(`${BACKEND_URL}/api/stats`);
         if (!res.ok) {
           log('stats poll failed (backend?)', 'info');
           return;
@@ -1208,7 +1250,7 @@
           for (const entry of data.backend_logs) {
             if (entry && typeof entry.id === 'number' && entry.id !== lastSeenBackendLogId) {
               if (entry.id > lastSeenBackendLogId || entry.id < lastSeenBackendLogId - 50) {
-                log(entry.msg || '', 'backend');
+                log(entry.msg || '', entry.v ? 'verbose' : 'backend', !!entry.v);
                 lastSeenBackendLogId = entry.id;
               }
             }
@@ -1367,7 +1409,7 @@
     // =============== BLOCKCHAIN EXPLORER ===============
     async function fetchChainSummary() {
       try {
-        const res = await fetch(`${BACKEND_URL}/api/chain/summary`);
+        const res = await vfetch(`${BACKEND_URL}/api/chain/summary`);
         if (!res.ok) return;
         const s = await res.json();
         livePrice = s.price_usd || livePrice;
@@ -1395,7 +1437,7 @@
 
     async function fetchRecentBlocks() {
       try {
-        const res = await fetch(`${BACKEND_URL}/api/chain/blocks?limit=8`);
+        const res = await vfetch(`${BACKEND_URL}/api/chain/blocks?limit=8`);
         if (!res.ok) return;
         const data = await res.json();
         const body = document.getElementById('chain-blocks-body');
@@ -1426,7 +1468,7 @@
       }
       out.textContent = 'Loading…';
       try {
-        const res = await fetch(`${BACKEND_URL}/api/chain/address/${encodeURIComponent(addr)}`);
+        const res = await vfetch(`${BACKEND_URL}/api/chain/address/${encodeURIComponent(addr)}`);
         if (!res.ok) {
           out.innerHTML = '<span class="text-red-400">Lookup failed (providers unavailable — try again shortly).</span>';
           return;
@@ -1639,6 +1681,7 @@
       try {
         const savedW = localStorage.getItem('doge-wallet');
         if (savedW) document.getElementById('wallet-input').value = savedW;
+        verboseMode = localStorage.getItem('doge-verbose') === '1';
         currentPoolId = localStorage.getItem('doge-pool-id') || 'zpool';
         currentPoolUser = localStorage.getItem('doge-pool-user') || '';
         currentPoolPass = localStorage.getItem('doge-pool-pass') || '';
@@ -1659,6 +1702,7 @@
       setupKeyboard();
       setMiningMode('cpu');
       updateMiningButtons(false);
+      updateVerboseButton();
 
       ['workers-input', 'setup-workers-input'].forEach(id => {
         const el = document.getElementById(id);

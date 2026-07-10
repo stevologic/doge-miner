@@ -559,3 +559,48 @@ class TestGpuBackend(unittest.TestCase):
         self.assertGreater(s["total_hashes"], 0)
         self.assertGreaterEqual(s["shares_submitted"], 1)
         self.assertIn(b"mining.submit", b"".join(q.sent))
+
+
+class TestVerboseLogging(unittest.TestCase):
+    def test_log_verbose_flag_in_backend_logs(self):
+        m = DogeMiner()
+        m._log("plain event")
+        m._log("wire chatter", verbose=True)
+        logs = m.get_stats()["backend_logs"]
+        self.assertFalse(logs[-2]["v"])
+        self.assertTrue(logs[-1]["v"])
+
+    def test_handle_stratum_emits_verbose_wire_logs(self):
+        m = DogeMiner()
+        m._handle_stratum({"id": None, "method": "mining.set_difficulty", "params": [64]})
+        m._handle_stratum({"id": None, "method": "mining.notify",
+                           "params": ["j1", "00" * 32, "01", "02", [], "00000001",
+                                      "1d00ffff", "5e0e0e0e", True]})
+        m._handle_stratum({"id": 1, "result": [[], "abcd", 4]})
+        verbose_msgs = [e["msg"] for e in m._recent_logs if e.get("v")]
+        self.assertTrue(any("set_difficulty 64" in s for s in verbose_msgs))
+        self.assertTrue(any("job=j1" in s for s in verbose_msgs))
+        self.assertTrue(any("extranonce1=abcd" in s for s in verbose_msgs))
+        # non-verbose events stay non-verbose
+        m._handle_stratum({"id": 4, "result": True})
+        accepted = [e for e in m._recent_logs if "accepted" in e["msg"]]
+        self.assertTrue(accepted and not accepted[-1]["v"])
+
+    def test_worker_emits_verbose_submit_line(self):
+        m = DogeMiner()
+        q = QueuedStratumSocket()
+        q.push(b'{"id":1,"result":[[], "abcd", 4]}\n')
+        q.push(b'{"id":2,"result":true}\n')
+        q.push(b'{"id":null,"method":"mining.set_difficulty","params":[0.0000001]}\n')
+        q.push(b'{"id":null,"method":"mining.notify","params":["job1","0000000000000000000000000000000000000000000000000000000000000000","01","02",[],"00000001","1d00ffff","5e0e0e0e",true]}\n')
+        m.socket_factory = lambda *a, **k: q
+        m.start("DQueuedVerbose", "cpu", workers=1)
+        deadline = time.time() + 6
+        found = False
+        while time.time() < deadline:
+            if any(e.get("v") and "mining.submit" in e["msg"] for e in m._recent_logs):
+                found = True
+                break
+            time.sleep(0.05)
+        m.stop()
+        self.assertTrue(found, "worker must emit a verbose mining.submit wire log")

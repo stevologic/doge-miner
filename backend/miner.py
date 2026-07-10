@@ -350,6 +350,8 @@ class DogeMiner:
         # Backend log buffer (captures prints/stdout messages) so they appear in UI live feed
         self._log_id = 0
         self._recent_logs: list = []
+        self._last_progress_log = 0.0
+        self._last_gpu_log = 0.0
 
         # Real wallet balance (fetched from blockchain, cached, refreshed in background —
         # never from inside get_stats' lock, which used to stall the stats endpoint)
@@ -363,14 +365,24 @@ class DogeMiner:
         self._reconnect_thread = None
         self._pool_connect_thread = None
 
-    def _log(self, message: str):
-        """Append to buffer (for /api/stats live feed) and print to stdout (docker/terminal)."""
+    def _log(self, message: str, verbose: bool = False):
+        """Append to buffer (for /api/stats live feed) and print to stdout (docker/terminal).
+        verbose entries are wire/telemetry chatter (stratum traffic, progress ticks, provider
+        requests); the UI shows them only when its VERBOSE toggle is on."""
         self._log_id += 1
-        entry = {"id": self._log_id, "msg": message}
+        entry = {"id": self._log_id, "msg": message, "v": verbose}
         self._recent_logs.append(entry)
-        if len(self._recent_logs) > 100:
+        if len(self._recent_logs) > 200:
             self._recent_logs.pop(0)
-        print(message)
+        # stdout may be a legacy Windows codepage (cp1252) that can't encode e.g. the
+        # arrow characters used in wire logs; logging must never raise into callers
+        # (a UnicodeEncodeError here used to kill worker threads mid-submit).
+        try:
+            print(message)
+        except UnicodeEncodeError:
+            print(message.encode("ascii", "replace").decode("ascii"))
+        except Exception:
+            pass
 
     def _scrypt_work(self, nonce: int, job_data: str = "dogecoin") -> bytes:
         """Real Scrypt using stdlib (used for fallback/no-job case)"""
@@ -470,6 +482,7 @@ class DogeMiner:
                 bal = fetcher(self.wallet)
                 if bal is not None:
                     self.wallet_balance = float(bal)
+                    self._log(f"wallet balance refreshed from chain: {self.wallet_balance} DOGE", verbose=True)
                 self._last_balance_fetch = time.time()
             except Exception:
                 self._last_balance_fetch = time.time()  # don't hammer on persistent failure
@@ -501,6 +514,20 @@ class DogeMiner:
                     self._rate_samples.append((now, self.total_hashes))
                     while self._rate_samples and now - self._rate_samples[0][0] > 65:
                         self._rate_samples.pop(0)
+                # periodic verbose heartbeat: proves hashing is really happening
+                if now - self._last_progress_log >= 5.0 and self.total_hashes > 0 and self.running:
+                    self._last_progress_log = now
+                    rate = 0.0
+                    if len(self._rate_samples) >= 2:
+                        t0s, h0 = self._rate_samples[0]
+                        t1s, h1 = self._rate_samples[-1]
+                        if t1s > t0s:
+                            rate = (h1 - h0) / (t1s - t0s)
+                    self._log(
+                        f"working: {self.total_hashes:,} hashes @ {rate:,.0f} H/s | "
+                        f"nonce 0x{self.last_nonce:08x} | pool diff {self.difficulty:g} | "
+                        f"best share {self.best_share_diff:.4f}",
+                        verbose=True)
                 self._maybe_refresh_balance()
             except (AttributeError, OSError, TypeError, ValueError):
                 pass
@@ -570,6 +597,7 @@ class DogeMiner:
                                     self.sock.sendall(submit.encode())
                                     with self.lock:
                                         self.shares_submitted += 1
+                                    self._log(f"→ mining.submit job={job.get('job_id','')} nonce={nonce:08x} share_diff={sdiff:.3f}", verbose=True)
                                 except (OSError, socket.error, AttributeError):
                                     self.connected = False  # trigger watchdog reconnect
                         # accepted/rejected ONLY from pool _handle_stratum responses
@@ -654,6 +682,16 @@ class DogeMiner:
                     self.threads.append(t)
                 return
 
+            now = time.time()
+            if now - self._last_gpu_log >= 1.0:
+                self._last_gpu_log = now
+                secs = max(self.gpu.last_scan_seconds, 1e-6)
+                self._log(
+                    f"GPU batch: {count} nonces in {self.gpu.last_scan_seconds*1000:.0f} ms "
+                    f"(~{count/secs/1000:.0f} KH/s on-device), {len(samples)} sample(s), "
+                    f"{len(candidates)} share candidate(s)",
+                    verbose=True)
+
             best_local = 0.0
             last_hex = ""
             for _, hash_result in samples:
@@ -676,6 +714,10 @@ class DogeMiner:
                             self.sock.sendall(submit.encode())
                             with self.lock:
                                 self.shares_submitted += 1
+                            self._log(
+                                f"→ mining.submit job={job.get('job_id','')} nonce={n:08x} "
+                                f"share_diff={share_difficulty(hash_result):.3f} (CPU-verified)",
+                                verbose=True)
                         except (OSError, socket.error, AttributeError):
                             self.connected = False
 
@@ -848,10 +890,12 @@ class DogeMiner:
                     sub = self._format_subscribe()
                     with self.send_lock:
                         self.sock.sendall(sub.encode())
+                    self._log(f"→ mining.subscribe {self.pool_host}:{self.pool_port}", verbose=True)
                     # authorize (wallet for no-reg pools, account.worker for registered)
                     auth = self._format_authorize(self.pool_user or self.wallet, self.pool_pass)
                     with self.send_lock:
                         self.sock.sendall(auth.encode())
+                    self._log(f"→ mining.authorize {self.pool_user or self.wallet} (pass: {self.pool_pass})", verbose=True)
 
                     # start recv loop (real one, even for queued)
                     self.recv_thread = threading.Thread(target=self._recv_loop, daemon=True)
@@ -928,11 +972,15 @@ class DogeMiner:
             if method == "mining.set_difficulty":
                 with self.job_lock:
                     self.difficulty = self._parse_difficulty(params)
+                self._log(f"← mining.set_difficulty {self.difficulty:g}", verbose=True)
             elif method == "mining.notify":
                 job = self._parse_notify(params)
                 with self.job_lock:
                     if job:
                         self.current_job = job
+                if job:
+                    clean = " (clean — restart nonce search)" if job.get("clean") else ""
+                    self._log(f"← mining.notify job={job.get('job_id')} nbits={job.get('nbits')}{clean}", verbose=True)
             elif method == "mining.set_extranonce":
                 # some multipools (zpool/zergpool family) rotate extranonce mid-session
                 try:
@@ -943,6 +991,7 @@ class DogeMiner:
                                 self.extranonce2_size = int(params[1])
                 except (TypeError, ValueError, IndexError):
                     pass
+                self._log(f"← mining.set_extranonce {self.extranonce1}/{self.extranonce2_size}", verbose=True)
             elif method == "client.reconnect":
                 self.connected = False  # watchdog reconnects
         elif "result" in msg or "error" in msg:
@@ -973,6 +1022,7 @@ class DogeMiner:
                         self.extranonce1 = res[1] if isinstance(res[1], str) else ""
                         if len(res) > 2:
                             self.extranonce2_size = int(res[2])
+                    self._log(f"← subscribed: extranonce1={self.extranonce1} en2size={self.extranonce2_size}", verbose=True)
                 except (TypeError, ValueError, IndexError, KeyError):
                     pass
 

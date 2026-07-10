@@ -21,11 +21,40 @@ from typing import Any, Callable, Dict, List, Optional
 
 USER_AGENT = "doge-miner-fullstack/2.0 (educational; github-style local app)"
 
+# Optional one-line telemetry sink for provider requests (wired to the miner's live
+# feed as verbose entries by main.py). Never allowed to break a fetch.
+logger: Optional[Callable[[str], None]] = None
+
+
+def set_logger(fn: Optional[Callable[[str], None]]):
+    global logger
+    logger = fn
+
+
+def _tell(msg: str):
+    if logger is not None:
+        try:
+            logger(msg)
+        except Exception:
+            pass
+
+
+def _short_url(url: str) -> str:
+    return url.split("//", 1)[-1][:70]
+
+
 # Injectable for tests (replace with a stub to avoid network)
 def _default_http_get_json(url: str, timeout: float = 8.0) -> Any:
+    t0 = time.time()
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return json.loads(resp.read().decode("utf-8", errors="ignore"))
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = json.loads(resp.read().decode("utf-8", errors="ignore"))
+        _tell(f"chain: GET {_short_url(url)} ok ({(time.time()-t0)*1000:.0f} ms)")
+        return data
+    except Exception as e:
+        _tell(f"chain: GET {_short_url(url)} failed ({e.__class__.__name__}) — trying next provider")
+        raise
 
 
 http_get_json: Callable[..., Any] = _default_http_get_json

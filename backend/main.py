@@ -10,6 +10,9 @@ from .pools import POOLS, get_pool
 from .wallet_validation import is_valid_doge_wallet
 the_miner = _miner_mod.miner
 
+# Chain provider requests show up in the live feed as verbose entries
+chain.set_logger(lambda m: the_miner._log(m, verbose=True))
+
 # Docker / env override for default pool (so docker-compose can provide POOL_HOST/POOL_PORT
 # without requiring UI config on first start). Request body still wins on /api/start.
 if os.environ.get('POOL_HOST'):

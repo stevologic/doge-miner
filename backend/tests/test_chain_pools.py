@@ -252,3 +252,17 @@ class TestApiEndpoints(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class TestChainLoggerHook(unittest.TestCase):
+    def test_set_logger_receives_telemetry_and_never_breaks(self):
+        seen = []
+        chain.set_logger(seen.append)
+        try:
+            chain._tell("chain: GET example ok (12 ms)")
+            self.assertEqual(seen, ["chain: GET example ok (12 ms)"])
+            # a broken logger must never break a fetch
+            chain.set_logger(lambda m: 1 / 0)
+            chain._tell("boom")  # must not raise
+        finally:
+            chain.set_logger(None)
