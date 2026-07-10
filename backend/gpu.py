@@ -253,6 +253,9 @@ class ScryptGPU:
         self.batch_size = batch_size or int(os.environ.get("DOGE_GPU_BATCH", "0") or 0)
         self._bufs = None
         self.last_scan_seconds = 0.0
+        # cumulative wall-time spent inside kernel batches — lets the miner report a
+        # real utilization (duty cycle) on GPUs without an nvidia-smi equivalent
+        self.busy_seconds = 0.0
 
     def init(self) -> List[str]:
         """Pick an OpenCL GPU device, build the kernel. Returns device names ([] on failure)."""
@@ -345,6 +348,7 @@ class ScryptGPU:
             samples = [(int(arr[i]), bytes(hs[i*32:(i+1)*32])) for i in range(n_samp)]
         self.queue.finish()
         self.last_scan_seconds = time.time() - t0
+        self.busy_seconds += self.last_scan_seconds
         return count, cand, samples
 
     def scan(self, prefix76: bytes, start_nonce: int, target: int):

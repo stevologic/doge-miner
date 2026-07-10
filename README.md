@@ -71,8 +71,22 @@ accepted shares.
   gracefully if unavailable) and an OpenCL runtime from your GPU driver.
 - Multiple GPUs: the discrete GPU is preferred automatically; override with the
   `DOGE_GPU_DEVICE=<index>` environment variable. Batch size: `DOGE_GPU_BATCH`.
+- GPU utilization telemetry: nvidia-smi when available; on AMD/Intel the miner reports
+  the real OpenCL kernel duty cycle instead (source shown in the UI).
 - Docker GPU passthrough requires the NVIDIA Container Toolkit and an OpenCL ICD in the
   image; otherwise the container mines on CPU.
+
+## Frontend styling (no CDNs)
+
+The UI ships a locally compiled Tailwind v4 stylesheet (`frontend/tailwind.css`) —
+no runtime CDN compile, no external CSS dependency, works offline (the retro logo
+font falls back to system-ui offline). To rebuild after markup changes:
+
+```bash
+npm i tailwindcss @tailwindcss/cli
+# input.css: @import "tailwindcss"; @source "<path>/frontend/index.html";
+npx @tailwindcss/cli -i input.css -o frontend/tailwind.css --minify
+```
 
 ## API
 

@@ -648,3 +648,19 @@ class TestPoolRobustness(unittest.TestCase):
         m.stop()
         self.assertTrue(warned, "watchdog must flag unconfirmed authorization")
         self.assertIn("check pool username/worker", m.pool_error)
+
+
+class TestGpuUtilTelemetry(unittest.TestCase):
+    def test_duty_percent_pure(self):
+        from backend.miner import duty_percent
+        self.assertEqual(duty_percent(0.5, 1.0), 50.0)
+        self.assertEqual(duty_percent(2.0, 1.0), 100.0)  # clamped
+        self.assertEqual(duty_percent(0.0, 1.0), 0.0)
+        self.assertEqual(duty_percent(0.5, 0.0), 0.0)    # no wall time -> 0
+        self.assertEqual(duty_percent(-1.0, 1.0), 0.0)   # never negative
+
+    def test_gpu_util_source_in_stats(self):
+        m = DogeMiner()
+        s = m.get_stats()
+        self.assertIn("gpu_util_source", s)
+        self.assertIn(s["gpu_util_source"], ("nvidia-smi", "opencl-duty", "none"))

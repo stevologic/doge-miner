@@ -25,7 +25,9 @@ POOLS = [
         "stats_url": "https://www.zpool.ca/wallet/{user}",
         # per-worker detail (live miners array while mining, balances, payouts)
         "worker_stats_url": "https://www.zpool.ca/api/walletEx?address={user}",
-        "notes": "Multi-coin scrypt pool that mines DOGE directly. Just point a wallet at it.",
+        "notes": ("Multi-coin scrypt pool that mines DOGE directly. Just point a wallet at it. "
+                  "Payouts wait for the pool to find DOGE blocks and reach the minimum "
+                  "(see your wallet page for credited balance)."),
     },
     {
         "id": "aikapool",
@@ -67,7 +69,9 @@ POOLS = [
         "payout": "LTC + DOGE (merged mining, separate DOGE payouts)",
         "web": "https://www.f2pool.com",
         "stats_url": "https://www.f2pool.com/mining-user/dashboard",
-        "notes": "Large exchange-grade pool; merged LTC+DOGE. Registration required.",
+        "notes": ("Large exchange-grade pool; merged LTC+DOGE. Registration required. "
+                  "CAUTION: F2Pool's stratum accepts ANY username — a typo silently mines "
+                  "into the void, so double-check your account name on their dashboard."),
     },
 ]
 

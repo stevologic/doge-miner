@@ -4,8 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DOGE MINER • full-stack real miner • CPU + GPU</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- Compiled locally with Tailwind v4 CLI (see README) — no runtime CDN compile,
+       no external dependency, works offline. Rebuild: npx @tailwindcss/cli. -->
+  <link rel="stylesheet" href="/static/tailwind.css">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&amp;display=swap');
 
@@ -498,7 +499,7 @@
           <div class="flex justify-between px-2 mb-2 items-center">
             <div>
               <span class="font-semibold">GPU UTILIZATION</span>
-              <span class="text-xs ml-2 text-slate-500" id="gpu-panel-note">real (nvidia-smi; 0% without NVIDIA tools)</span>
+              <span class="text-xs ml-2 text-slate-500" id="gpu-panel-note">real (nvidia-smi / OpenCL duty cycle)</span>
             </div>
             <div class="text-xs font-mono text-emerald-400" id="gpu-percent">0.0%</div>
           </div>
@@ -1351,8 +1352,10 @@
         }
         const gpuNote = document.getElementById('gpu-panel-note');
         if (gpuNote) {
-          if (data.gpu_backend === 'opencl') gpuNote.textContent = 'mining on ' + ((data.gpu_devices || [])[0] || 'OpenCL device');
-          else gpuNote.textContent = 'real (nvidia-smi; 0% without NVIDIA tools)';
+          const src = data.gpu_util_source === 'opencl-duty' ? 'kernel duty cycle'
+                    : data.gpu_util_source === 'nvidia-smi' ? 'nvidia-smi' : 'nvidia-smi / duty cycle';
+          if (data.gpu_backend === 'opencl') gpuNote.textContent = 'mining on ' + ((data.gpu_devices || [])[0] || 'OpenCL device') + ' — util via ' + src;
+          else gpuNote.textContent = 'real (' + src + ')';
         }
 
         // pool status line

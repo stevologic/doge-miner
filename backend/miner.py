@@ -238,6 +238,14 @@ def compute_effort_text(total_hashes: int, running: bool) -> str:
     return "HASHING" if total_hashes > 0 else "SEARCHING"
 
 
+def duty_percent(busy_delta: float, wall_delta: float) -> float:
+    """GPU utilization as kernel duty cycle: fraction of wall time spent executing
+    OpenCL batches. Real, vendor-neutral fallback where nvidia-smi doesn't exist."""
+    if wall_delta <= 0 or busy_delta < 0:
+        return 0.0
+    return max(0.0, min(100.0, busy_delta / wall_delta * 100.0))
+
+
 class QueuedStratumSocket:
     """Queue-backed socket stand-in for testing the composed recv_loop + worker submit + accept path.
     Used via DogeMiner.socket_factory. No unittest.mock. Thread-safe inbound queue.
@@ -351,6 +359,10 @@ class DogeMiner:
         self.gpu_available = False
         self.gpu_backend = "none"      # "opencl" | "cpu-fallback" | "none"
         self.gpu_device_names = []
+        # utilization source: nvidia-smi when present, else OpenCL kernel duty cycle
+        self.gpu_util_source = "none"  # "nvidia-smi" | "opencl-duty" | "none"
+        self._gpu_busy_prev = 0.0
+        self._gpu_busy_prev_t = 0.0
 
         # Backend log buffer (captures prints/stdout messages) so they appear in UI live feed
         self._log_id = 0
@@ -508,10 +520,24 @@ class DogeMiner:
                     cp = psutil.cpu_percent(interval=0.5)
                     mp = psutil.virtual_memory().percent
                     gp = self._get_gpu_util()
+                    src = "nvidia-smi" if gp > 0 else "none"
+                    # vendor-neutral fallback: kernel duty cycle from the OpenCL backend
+                    # (AMD/Intel have no nvidia-smi; this is still a real measurement)
+                    gpu_obj = self.gpu
+                    if gpu_obj is not None:
+                        now_b = time.time()
+                        busy = gpu_obj.busy_seconds
+                        if self._gpu_busy_prev_t > 0 and gp <= 0:
+                            gp = round(duty_percent(busy - self._gpu_busy_prev,
+                                                    now_b - self._gpu_busy_prev_t), 1)
+                            src = "opencl-duty"
+                        self._gpu_busy_prev = busy
+                        self._gpu_busy_prev_t = now_b
                     with self.lock:
                         self.cpu_percent = cp
                         self.mem_percent = mp
                         self.gpu_percent = gp
+                        self.gpu_util_source = src
                 else:
                     time.sleep(0.5)
                 now = time.time()
@@ -792,6 +818,9 @@ class DogeMiner:
         self.gpu_available = False
         self.gpu_backend = "none"
         self.gpu_device_names = []
+        self.gpu_util_source = "none"
+        self._gpu_busy_prev = 0.0
+        self._gpu_busy_prev_t = 0.0
         self.threads = []
         gpu_started = False
         if mode == "gpu":
@@ -1155,6 +1184,7 @@ class DogeMiner:
                 "gpu_available": self.gpu_available,
                 "gpu_backend": self.gpu_backend,
                 "gpu_devices": list(self.gpu_device_names),
+                "gpu_util_source": self.gpu_util_source,
                 # Real datapoints for SCRYPT EFFORT div (no illustrative values)
                 "effort_percent": effort_percent,
                 "current_nonce": current_nonce,
