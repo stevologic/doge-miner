@@ -333,9 +333,8 @@
             <div id="mining-title" class="font-semibold text-base sm:text-lg md:text-xl min-w-0">MINING TO <span id="active-wallet" class="font-mono text-[#f0b90b] break-all"></span></div>
           </div>
           <div class="text-xs text-slate-500 mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 min-w-0">
-            <span id="pool-info" class="break-words min-w-0">Connecting to pool…</span>
-            <span class="text-[#f0b90b]/60 hidden sm:inline">•</span>
-            <span id="worker-id" class="whitespace-nowrap"></span>
+            <span id="pool-info" class="min-w-0">Connecting to pool…</span>
+            <span id="worker-id" class="whitespace-nowrap text-[#f0b90b]/70"></span>
           </div>
         </div>
 
@@ -806,14 +805,26 @@
       b.classList.toggle('text-slate-400', !verboseMode);
     }
 
-    // timing wrapper: fetch + verbose one-liner for every UI request
+    // timing wrapper: fetch + verbose one-liner for UI requests.
+    // The 1.2s stats poll would drown the miner's actual work lines, so it is
+    // summarized once every 10 polls instead of logged individually.
+    let statsPollCount = 0, statsPollMs = 0;
     async function vfetch(url, opts) {
       const t0 = performance.now();
       try {
         const res = await fetch(url, opts);
         if (verboseMode) {
           const method = (opts && opts.method) || 'GET';
-          vlog(`${method} ${url} ${res.status} (${Math.round(performance.now() - t0)} ms)`);
+          const ms = Math.round(performance.now() - t0);
+          if (url.indexOf('/api/stats') !== -1 && res.ok) {
+            statsPollCount++; statsPollMs += ms;
+            if (statsPollCount >= 10) {
+              vlog(`GET /api/stats ×${statsPollCount} OK (avg ${Math.round(statsPollMs / statsPollCount)} ms)`);
+              statsPollCount = 0; statsPollMs = 0;
+            }
+          } else {
+            vlog(`${method} ${url} ${res.status} (${ms} ms)`);
+          }
         }
         return res;
       } catch (e) {
@@ -1292,11 +1303,11 @@
         if (upEl) upEl.textContent = formatUptime(data.uptime_seconds);
 
         const wid = document.getElementById('worker-id');
-        if (wid) wid.textContent = esc(data.description || '');
+        if (wid) wid.textContent = data.description ? '• ' + data.description : '';
 
         const titleBar = document.getElementById('mining-title');
         if (titleBar && data.wallet && data.running) {
-          titleBar.innerHTML = `MINING TO <span id="active-wallet" class="font-mono text-[#f0b90b] break-all">${esc(data.wallet)}</span> <span class="text-sm text-emerald-400 ml-2">(${esc(data.description || '')})</span>`;
+          titleBar.innerHTML = `MINING TO <span id="active-wallet" class="font-mono text-[#f0b90b] break-all">${esc(data.wallet)}</span> <span class="text-sm text-emerald-400 ml-2 whitespace-nowrap">— ${esc(data.description || '')}</span>`;
         } else if (titleBar && data.running === false && state.running === false) {
           titleBar.innerHTML = `MINING STOPPED <span class="text-sm text-slate-400 ml-2">(START to resume)</span>`;
         }
@@ -1347,12 +1358,17 @@
         // pool status line
         const pi = document.getElementById('pool-info');
         if (pi) {
-          const status = data.pool_connected ? (data.pool_authorized ? '🟢 CONNECTED+AUTHORIZED' : '🟡 CONNECTED') : '🔴 DISCONNECTED';
-          const job = data.has_job ? ' • job live' : '';
-          const err = (!data.pool_connected && data.pool_error) ? ` • ${esc(data.pool_error)}` : '';
-          const link = data.pool_link ? ` <a href="${esc(data.pool_link)}" target="_blank" rel="noopener" class="underline hover:text-[#f0b90b]">[pool stats]</a>` : '';
-          const wlink = data.worker_link ? ` <a href="${esc(data.worker_link)}" target="_blank" rel="noopener" class="underline hover:text-[#f0b90b]" title="Per-worker detail from the pool (live miners, balances, payouts)">[worker stats]</a>` : '';
-          pi.innerHTML = `${status} ${esc(data.pool_host)}:${data.pool_port} as ${esc(data.pool_user || '')}${job}${err}${link}${wlink}`;
+          // each segment is a no-wrap unit so the line breaks BETWEEN facts, never inside one
+          const seg = (html) => `<span class="whitespace-nowrap">${html}</span>`;
+          const parts = [];
+          parts.push(seg(data.pool_connected ? (data.pool_authorized ? '🟢 CONNECTED+AUTHORIZED' : '🟡 CONNECTED') : '🔴 DISCONNECTED'));
+          parts.push(seg(esc(data.pool_host) + ':' + data.pool_port));
+          if (data.pool_user) parts.push(`<span>as <span class="break-all">${esc(data.pool_user)}</span></span>`);
+          if (data.has_job) parts.push(seg('• job live'));
+          if (!data.pool_connected && data.pool_error) parts.push(`<span class="break-words">• ${esc(data.pool_error)}</span>`);
+          if (data.pool_link) parts.push(seg(`<a href="${esc(data.pool_link)}" target="_blank" rel="noopener" class="underline hover:text-[#f0b90b]">[pool stats]</a>`));
+          if (data.worker_link) parts.push(seg(`<a href="${esc(data.worker_link)}" target="_blank" rel="noopener" class="underline hover:text-[#f0b90b]" title="Per-worker detail from the pool (live miners, balances, payouts)">[worker stats]</a>`));
+          pi.innerHTML = parts.join(' ');
         }
 
         // effort datapoints (all real)

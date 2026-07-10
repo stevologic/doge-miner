@@ -514,7 +514,8 @@ class DogeMiner:
                     self._rate_samples.append((now, self.total_hashes))
                     while self._rate_samples and now - self._rate_samples[0][0] > 65:
                         self._rate_samples.pop(0)
-                # periodic verbose heartbeat: proves hashing is really happening
+                # periodic heartbeat: proves hashing is really happening (always visible —
+                # this IS the miner's work, not chatter)
                 if now - self._last_progress_log >= 5.0 and self.total_hashes > 0 and self.running:
                     self._last_progress_log = now
                     rate = 0.0
@@ -526,8 +527,7 @@ class DogeMiner:
                     self._log(
                         f"working: {self.total_hashes:,} hashes @ {rate:,.0f} H/s | "
                         f"nonce 0x{self.last_nonce:08x} | pool diff {self.difficulty:g} | "
-                        f"best share {self.best_share_diff:.4f}",
-                        verbose=True)
+                        f"best share {self.best_share_diff:.4f}")
                 self._maybe_refresh_balance()
             except (AttributeError, OSError, TypeError, ValueError):
                 pass
@@ -552,6 +552,10 @@ class DogeMiner:
         extranonce2 = self._next_extranonce2(worker_id, en2_counter)
         best_local = 0.0
         last_hash_hex = ""
+        # per-worker sweep window for verbose "actual work" lines
+        window_hashes = 0
+        window_best = 0.0
+        window_start_nonce = nonce
 
         while not self._stop_event.is_set():
             if not self.running:
@@ -585,6 +589,17 @@ class DogeMiner:
                     sdiff = DIFF1_TARGET / hash_int if hash_int else float("inf")
                     if sdiff > best_local:
                         best_local = sdiff
+                    window_hashes += 1
+                    if sdiff > window_best:
+                        window_best = sdiff
+                    if window_hashes >= 1000:
+                        self._log(
+                            f"worker {worker_id:02d}: swept 0x{window_start_nonce:08x}→0x{nonce:08x} "
+                            f"(+{window_hashes:,} scrypt hashes), window best diff {window_best:.4f}",
+                            verbose=True)
+                        window_hashes = 0
+                        window_best = 0.0
+                        window_start_nonce = nonce
                     if hash_meets_target(hash_int, target):
                         ntime = job.get("ntime") or hex(int(time.time()))[2:].zfill(8)
                         submit = self._format_submit(
