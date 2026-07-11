@@ -1,10 +1,13 @@
 # DogeMiner launcher for Windows (PowerShell)
 #   Run with:  powershell -ExecutionPolicy Bypass -File .\start.ps1
+# NOTE: keep this file pure ASCII. Windows PowerShell 5.1 reads BOM-less
+# scripts as ANSI, and multi-byte characters (emoji, em-dashes) decode into
+# smart quotes that terminate strings early and break parsing.
 
 $ErrorActionPreference = "Stop"
 Set-Location -Path $PSScriptRoot
 
-Write-Host "🚀 Starting DogeMiner Full Stack (backend + frontend)..."
+Write-Host ">> Starting DogeMiner Full Stack (backend + frontend)..."
 
 # find a python
 $py = Get-Command python -ErrorAction SilentlyContinue
@@ -32,8 +35,8 @@ try {
 }
 
 Write-Host ""
-Write-Host "✅ Backend ready."
-Write-Host "🌐 Open http://localhost:8000 — or http://doge.local (mDNS) from any device on your network"
+Write-Host "[OK] Backend ready."
+Write-Host "Open http://localhost:8000 - or http://doge.local (mDNS) from any device on your network"
 Write-Host "   - Pick a pool (zpool needs no registration; wallet = login)"
 Write-Host "   - Choose CPU or GPU mode and click START MINING"
 Write-Host ""
