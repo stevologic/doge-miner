@@ -368,7 +368,9 @@
           <div id="pool-hint" class="hidden text-[11px] text-amber-400/90 mt-1 max-w-2xl leading-snug"></div>
         </div>
 
-        <div class="flex items-center gap-1 sm:gap-2 flex-nowrap">
+        <!-- flex-wrap: every control is flex-shrink-0, so nowrap pushed the ⚙️/❓
+             buttons off-screen (unreachable) on phones; desktop still fits one line -->
+        <div class="flex items-center gap-1 sm:gap-2 flex-wrap gap-y-1">
           <div class="flex items-center bg-[#1f1f26] rounded-xl border border-[#3f3f4a] p-1 mr-1 sm:mr-2 flex-shrink-0">
             <button onclick="setMiningMode('cpu')" id="mode-cpu-btn"
                     class="doge-btn px-2 sm:px-3 py-1 text-[10px] sm:text-xs rounded-lg bg-[#f0b90b] text-[#0a0a0f] font-semibold">CPU</button>
@@ -821,19 +823,40 @@
       return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
+    // Follow the newest line until the user scrolls up to read history. Pinning is
+    // tracked from the container's real scroll events — deriving it from geometry
+    // inside renderFeed broke whenever content was rendered while the panel was
+    // hidden (clientHeight 0), which is exactly what happens on initial page load.
+    let _lastFeedHtml = null;
+    let _feedPinned = true;
+    function watchFeedScroll() {
+      const cont = document.getElementById("log-container");
+      if (cont) cont.addEventListener('scroll', () => {
+        _feedPinned = cont.scrollHeight - cont.scrollTop - cont.clientHeight < 48;
+      });
+    }
     function renderFeed() {
       const cont = document.getElementById("log-container");
       if (!cont) return;
-      // stick to the newest line unless the user has scrolled up to read history
-      const pinned = cont.scrollHeight - cont.scrollTop - cont.clientHeight < 48;
+      // an unscrollable (or hidden) box can't have been scrolled up by the user —
+      // re-pin so the first overflowing render lands on the newest line. Guards the
+      // initial-load burst and background tabs, where scroll events may not fire.
+      if (cont.scrollHeight - cont.clientHeight <= 0) _feedPinned = true;
+      const prevScroll = cont.scrollTop;
       const htmls = feedBuffer
         .filter(entry => verboseMode || !entry[3])
         .map(entry => {
           const [ts, msg, typ] = entry;
           return `<div class="log-line px-2 py-0.5 ${typ}"><span class="text-[#64748b] text-[10px]">${ts}</span> ${esc(msg)}</div>`;
         }).join('');
+      // hidden verbose entries produce identical output — skip the rewrite, because
+      // replacing innerHTML resets the container's scroll position to the top
+      if (htmls === _lastFeedHtml) return;
+      _lastFeedHtml = htmls;
       cont.innerHTML = htmls;
-      if (pinned) cont.scrollTop = cont.scrollHeight;
+      // the rewrite zeroed scrollTop: jump to the newest line when pinned there,
+      // otherwise put the user back where they were reading
+      cont.scrollTop = _feedPinned ? cont.scrollHeight : prevScroll;
     }
 
     function log(msg, type = "info", isVerbose = false) {
@@ -893,6 +916,7 @@
 
     function clearLog() {
       feedBuffer = [];
+      _lastFeedHtml = null;
       const c = document.getElementById("log-container");
       if (c) c.innerHTML = "";
     }
@@ -1215,7 +1239,9 @@
         }
         window.lastLoggedShares = 0;
         window.lastLoggedRejects = 0;
-        lastSeenBackendLogId = 0;
+        // NOTE: lastSeenBackendLogId is intentionally kept — backend log ids are
+        // continuous across sessions (they only reset when the process restarts),
+        // and resetting it here replayed the whole stale backlog on every START.
 
         const payload = { wallet, mode: backendMode };
         if (workers) payload.workers = workers;
@@ -1343,14 +1369,25 @@
         }
         const data = await res.json();
 
-        // backend stdout -> live feed (dedup by monotonically increasing id; ids reset on restart)
+        // backend stdout -> live feed. The backend sends its whole recent-log deque
+        // every poll, so only ids above the last seen one are new. A restart is when
+        // even the NEWEST id in the payload is below what we've seen (ids reset) —
+        // judging per-entry replayed the entire backlog on every poll.
         if (data.backend_logs && Array.isArray(data.backend_logs)) {
+          let maxId = -Infinity;
+          for (const e of data.backend_logs) {
+            if (e && typeof e.id === 'number' && e.id > maxId) maxId = e.id;
+          }
+          if (maxId !== -Infinity && maxId < lastSeenBackendLogId) lastSeenBackendLogId = 0;
+          if (lastSeenBackendLogId <= 0 && maxId !== -Infinity) {
+            // first sight of this backend's log stream (fresh page or backend
+            // restart): show recent context, not the whole 200-line backlog
+            lastSeenBackendLogId = Math.max(0, maxId - 30);
+          }
           for (const entry of data.backend_logs) {
-            if (entry && typeof entry.id === 'number' && entry.id !== lastSeenBackendLogId) {
-              if (entry.id > lastSeenBackendLogId || entry.id < lastSeenBackendLogId - 50) {
-                log(entry.msg || '', entry.v ? 'verbose' : 'backend', !!entry.v);
-                lastSeenBackendLogId = entry.id;
-              }
+            if (entry && typeof entry.id === 'number' && entry.id > lastSeenBackendLogId) {
+              log(entry.msg || '', entry.v ? 'verbose' : 'backend', !!entry.v);
+              lastSeenBackendLogId = entry.id;
             }
           }
         }
@@ -1942,6 +1979,7 @@
       updateMiningButtons(false);
       updateVerboseButton();
       initInfoTips();
+      watchFeedScroll();
 
       ['workers-input', 'setup-workers-input'].forEach(id => {
         const el = document.getElementById(id);
