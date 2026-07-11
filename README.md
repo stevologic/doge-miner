@@ -1,86 +1,106 @@
-# DogeMiner Full-Stack
+<div align="center">
 
-A full-stack, **real** Dogecoin pool miner with a rich dashboard: Python/FastAPI backend,
-single-page frontend, CPU **and** OpenCL GPU mining, selectable pools (with or without
-registration), and a key-free live blockchain explorer.
+# Ð DOGE MINER
 
-> Educational project. Everything on screen is real (no simulated numbers), but CPU/GPU
-> scrypt hashrates are tiny compared to ASICs — expect real accepted shares, not riches.
+**A full-stack, open-source Dogecoin pool miner — real Scrypt on CPU & GPU, live dashboard, zero registration.**
 
-## What's real (verified by tests + live runs)
+[![License: MIT](https://img.shields.io/badge/License-MIT-f0b90b.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](backend/requirements.txt)
+[![Platforms](https://img.shields.io/badge/Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-supported-34d399)](#-one-click-quick-start)
+[![GPU](https://img.shields.io/badge/GPU-OpenCL%20(NVIDIA%20%C2%B7%20AMD%20%C2%B7%20Intel)-76B900)](#-gpu-mining)
+[![Tests](https://img.shields.io/badge/tests-63%20passing-brightgreen)](backend/tests)
+[![Website](https://img.shields.io/badge/website-stevologic.github.io%2Fdoge--miner-f0b90b)](https://stevologic.github.io/doge-miner/)
 
-- **Scrypt PoW** (`N=1024, r=1, p=1`) — validated against the **Dogecoin genesis block**
-  and block 1 (header serialization, stratum prevhash word-order, little-endian target
-  comparison, pool diff-1 target `0xffff·2²²⁴`).
-- **Stratum pool mining** — subscribe/authorize/notify/submit against live pools;
-  accepted/rejected counters come *only* from pool responses. Live-verified with real
-  accepted shares on zpool.
-- **GPU mining** — a full scrypt OpenCL kernel (NVIDIA/AMD/Intel; Windows/macOS/Linux).
-  The kernel must pass a self-test against `hashlib.scrypt` before it is used, and every
-  GPU share candidate is re-verified on the CPU before submission. No usable GPU →
-  automatic CPU fallback, honestly labeled (`gpu_backend: "cpu-fallback"`).
-- **CPU mining** — `hashlib.scrypt` releases the GIL, so worker threads scale across
-  cores (default: cores−1 workers).
-- **Telemetry** — rolling hashrate, total hashes, shares submitted/accepted/rejected,
-  pool difficulty + share target, last PoW hash, best share difficulty, luck (actual vs
-  statistically expected shares), efficiency, streak, CPU/MEM (psutil), GPU utilization
-  (nvidia-smi), on-chain wallet balance, live DOGE price.
-- **Blockchain explorer, no API keys** — height, difficulty, network hashrate, price,
-  mempool, recent blocks, address & transaction lookups. Multi-provider failover
-  (Blockbook → Blockchair → BlockCypher, CoinGecko for price) with backend caching, so
-  users never hit provider rate limits themselves; stale data is served (and labeled)
-  if every provider is down.
+*Much wow. No simulation — every number on screen is real.*
 
-## Quick start
+<img src="docs/img/dashboard.png" alt="DOGE MINER dashboard mining live on an RTX 3080 Ti: 243 KH/s, 7 shares accepted, live charts" width="920">
 
-**Windows**: double-click `start.bat` (or `powershell -ExecutionPolicy Bypass -File .\start.ps1`)
+<sub>↑ Unedited capture: OpenCL GPU mining on a live pool — 243 KH/s, **7 / 0 shares accepted / rejected**, real charts, real chain data.</sub>
 
-**macOS / Linux**:
+</div>
+
+---
+
+## ⚡ One-click quick start
+
+| Platform | Do this |
+|---|---|
+| 🪟 **Windows** | double-click **`start.bat`** |
+| 🍎 **macOS** / 🐧 **Linux** | `./start.sh` |
+| 🐳 **Docker** | `docker compose up --build` |
+
+Then open **http://localhost:8000**, paste your public DOGE address (checksum-verified), pick a pool, hit **START MINING**. That's the whole tutorial — the default pool needs **no account**.
+
+<div align="center">
+<img src="docs/img/landing.png" alt="Setup screen: one wallet field, pool picker, START MINING" width="860">
+</div>
+
+## ✨ What you get
+
+| | Feature | The honest details |
+|---|---|---|
+| ⛏️ | **Real pool mining** | Stratum client with auto-reconnect, `set_extranonce`, `client.get_version` replies, and a watchdog that flags pools that silently ignore a bad username. Share counters come *only* from pool responses. |
+| 🎮 | **Real GPU mining** | Full scrypt OpenCL kernel (PBKDF2‑HMAC‑SHA256 → 1024× Salsa20/8 ROMix → PBKDF2). It must pass a self-test against `hashlib.scrypt` before it's used, and **every GPU share candidate is re-verified on CPU** before submission. No usable GPU → honest CPU fallback. |
+| 🧵 | **CPU threads that scale** | `hashlib.scrypt` releases the GIL (~3.8× on 4 threads). Header prefixes cached per job — each hash only packs a nonce. |
+| ⛓️ | **Key-free blockchain explorer** | Height, difficulty, network hashrate, price, mempool, recent blocks, address & tx lookups. Multi-provider failover (Blockbook → Blockchair → BlockCypher, CoinGecko price) with server-side caching — you never touch an API key or a rate limit. |
+| 📊 | **Telemetry with no fiction** | Rolling hashrate, shares submitted/accepted/rejected, pool difficulty + exact share target, last PoW hash, best-share difficulty, statistical luck, CPU/MEM (psutil), GPU util (nvidia-smi or OpenCL duty cycle), on-chain balance. |
+| 📜 | **A live feed of actual work** | Watch the miner mine: 5-second hashing heartbeats, and a VERBOSE toggle exposing raw stratum wire traffic, per-worker nonce sweeps, GPU batch stats and every API request. |
+
+<div align="center">
+<img src="docs/img/telemetry.png" alt="Nerd mode and live feed: share target, last scrypt hash, per-worker nonce sweeps" width="920">
+<img src="docs/img/explorer.png" alt="Built-in Dogecoin blockchain explorer with live chain data and address lookup" width="920">
+</div>
+
+## 🧮 Correctness you can check
+
+The PoW math isn't "probably right" — it's pinned against the real chain:
+
+- The rebuilt **Dogecoin genesis block header matches the chain byte-for-byte**, and its scrypt hash passes the genesis target (little-endian, like real miners).
+- **Block 1** reproduces its known hash through the stratum wire format (per-word prevhash swap — the thing naive miners get wrong).
+- Share targets use the scrypt pool convention (**diff‑1 = `0xffff · 2²²⁴`**), exactly like cpuminer/cgminer.
+- The GPU kernel is compared against CPU scrypt on random headers at startup, every run.
+
 ```bash
-./start.sh
+python -m unittest backend.tests.test_miner backend.tests.test_chain_pools   # 63 tests
 ```
 
-**Docker**:
-```bash
-docker compose up --build
-```
+Live-verified too: real shares **accepted by zpool** during development (GPU, static diff `d=64`, 100% efficiency).
 
-Then open **http://localhost:8000**, enter your DOGE address (checksum-verified),
-pick a pool, choose CPU or GPU, and START MINING.
-
-## Pools
+## 🏊 Pools (all handshake-verified)
 
 | Pool | Registration | Login | Payout |
-|------|--------------|-------|--------|
-| **zpool.ca** (default) | none | your DOGE wallet address | DOGE direct to wallet |
+|---|---|---|---|
+| **zpool.ca** *(default)* | **none — just mine** | your DOGE wallet address | DOGE direct to wallet |
 | AikaPool | free account | `username.worker` | DOGE |
 | litecoinpool.org | free account | `username.worker` | LTC (merged-mines DOGE) |
-| F2Pool | free account | `account.worker` | LTC + DOGE (merged) |
+| F2Pool | free account | `account.worker` | LTC + DOGE ⚠️ *accepts any username — typos mine into the void* |
 | Custom | — | anything | your pool's rules |
 
-All preset hosts/ports were verified live (DNS + stratum handshake). Zergpool was
-removed — it shut down permanently in September 2025.
+💡 zpool honors password options like `c=DOGE` (payout coin) and `d=N` (static difficulty). Low static difficulty (e.g. `c=DOGE,d=64`) gets CPU/GPU miners frequent accepted shares.
 
-Tips: zpool honors password options like `c=DOGE` (payout coin) and `d=N` (static
-difficulty). Low static difficulty (e.g. `c=DOGE,d=64`) gets CPU/GPU miners frequent
-accepted shares.
+## 🎮 GPU mining
 
-## GPU notes
+- Needs `pyopencl` + `numpy` (start scripts install them automatically; skipped gracefully) and an OpenCL runtime from your GPU driver.
+- Multi-GPU: the discrete GPU is picked automatically; override with `DOGE_GPU_DEVICE=<index>`. Batch size: `DOGE_GPU_BATCH`.
+- Utilization telemetry: nvidia-smi when available; on AMD/Intel the miner reports the real **OpenCL kernel duty cycle** (source labeled in the UI).
+- Docker GPU passthrough needs the NVIDIA Container Toolkit + an OpenCL ICD; otherwise the container mines on CPU.
 
-- Needs `pyopencl` + `numpy` (installed automatically by the start scripts; skipped
-  gracefully if unavailable) and an OpenCL runtime from your GPU driver.
-- Multiple GPUs: the discrete GPU is preferred automatically; override with the
-  `DOGE_GPU_DEVICE=<index>` environment variable. Batch size: `DOGE_GPU_BATCH`.
-- GPU utilization telemetry: nvidia-smi when available; on AMD/Intel the miner reports
-  the real OpenCL kernel duty cycle instead (source shown in the UI).
-- Docker GPU passthrough requires the NVIDIA Container Toolkit and an OpenCL ICD in the
-  image; otherwise the container mines on CPU.
+## 🔌 API
 
-## Frontend styling (no CDNs)
+```
+POST /api/start     {wallet, mode: cpu|gpu, workers?, pool_id?, pool_host?, pool_port?, pool_user?, pool_pass?}
+POST /api/stop
+GET  /api/stats     full mining + system telemetry (poll it; never blocks)
+GET  /api/pools     pool presets with registration info
+GET  /api/chain/summary | /api/chain/blocks?limit=N | /api/chain/address/{addr} | /api/chain/tx/{txid}
+GET  /api/health
+```
 
-The UI ships a locally compiled Tailwind v4 stylesheet (`frontend/tailwind.css`) —
-no runtime CDN compile, no external CSS dependency, works offline (the retro logo
-font falls back to system-ui offline). To rebuild after markup changes:
+Env overrides: `POOL_HOST` / `POOL_PORT` (initial pool without UI config).
+
+## 🎨 Frontend styling (no CDNs)
+
+The UI ships a locally compiled **Tailwind v4** stylesheet (`frontend/tailwind.css`) — no runtime CDN compile, works offline. Rebuild after markup changes:
 
 ```bash
 npm i tailwindcss @tailwindcss/cli
@@ -88,31 +108,22 @@ npm i tailwindcss @tailwindcss/cli
 npx @tailwindcss/cli -i input.css -o frontend/tailwind.css --minify
 ```
 
-## API
-
-- `POST /api/start` `{wallet, mode: cpu|gpu, workers?, pool_id?, pool_host?, pool_port?, pool_user?, pool_pass?}`
-- `POST /api/stop`
-- `GET /api/stats` — full mining + system telemetry (poll it; it never blocks)
-- `GET /api/pools` — pool presets with registration info
-- `GET /api/chain/summary` | `/api/chain/blocks?limit=N` | `/api/chain/address/{addr}` | `/api/chain/tx/{txid}`
-- `GET /api/health`
-
-Env overrides: `POOL_HOST` / `POOL_PORT` (initial pool without UI config).
-
-## Tests
-
-```bash
-python -m unittest backend.tests.test_miner backend.tests.test_chain_pools
-```
-
-52 tests, including known-chain vectors (Dogecoin genesis + block 1), the full
-worker→submit→accept path over an injected stratum socket, chain-provider failover and
-caching, wallet Base58Check validation (backend/frontend parity), and — on machines with
-an OpenCL GPU — kernel-vs-CPU self-test and a full GPU mining integration test.
-
-## Honesty / transparency
+## 🔍 Transparency
 
 - Share counters are driven exclusively by real pool responses.
 - "WALLET BALANCE" is the live on-chain balance for your address.
-- You will never receive DOGE *from this app* — payouts come from your pool once your
-  contributed shares reach its minimum payout (check the pool stats link in the header).
+- You will never receive DOGE *from this app* — payouts come from your pool once your shares reach its minimum (check the `[pool stats]` / `[worker stats]` links in the header).
+- Educational project. CPU/GPU hashrates are tiny next to ASICs — expect real accepted shares, not riches. Not financial advice.
+
+---
+
+<div align="center">
+<sub>
+
+**[Website](https://stevologic.github.io/doge-miner/)** · **[MIT License](LICENSE)** — free forever
+
+🐕 *Tokens aren't cheap — if this project made you smile, a little Ð for the creator goes a long way:*
+`DTW2M5oEW97WbmYJRM71qD7uE6xfJs1MUK`
+
+</sub>
+</div>
