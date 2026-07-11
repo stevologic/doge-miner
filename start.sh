@@ -23,7 +23,7 @@ pip install -r backend/requirements-gpu.txt -q || echo "  -> GPU extras unavaila
 
 echo ""
 echo "✅ Backend ready."
-echo "🌐 Open http://localhost:8000 in your browser"
+echo "🌐 Open http://localhost:8000 — or http://doge.local (mDNS) from any device on your network"
 echo "   - Pick a pool (zpool needs no registration; wallet = login)"
 echo "   - Choose CPU or GPU mode and click START MINING"
 echo ""

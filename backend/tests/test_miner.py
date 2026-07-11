@@ -664,3 +664,33 @@ class TestGpuUtilTelemetry(unittest.TestCase):
         s = m.get_stats()
         self.assertIn("gpu_util_source", s)
         self.assertIn(s["gpu_util_source"], ("nvidia-smi", "opencl-duty", "none"))
+
+
+class TestLocalDns(unittest.TestCase):
+    def test_get_lan_ip_returns_ipv4(self):
+        from backend.localdns import get_lan_ip
+        import ipaddress
+        ip = get_lan_ip()
+        ipaddress.IPv4Address(ip)  # raises if not a valid IPv4
+
+    def test_disabled_via_env(self):
+        import os
+        from backend.localdns import LocalDns
+        os.environ["DOGE_NO_MDNS"] = "1"
+        try:
+            d = LocalDns(8000)
+            self.assertFalse(d.start())
+            self.assertIn("DOGE_NO_MDNS", d.error)
+            self.assertFalse(d.active)
+        finally:
+            del os.environ["DOGE_NO_MDNS"]
+
+    def test_start_stop_roundtrip(self):
+        from backend import localdns
+        d = localdns.LocalDns(8000)
+        started = d.start()
+        if not started:
+            self.skipTest(f"mDNS unavailable here: {d.error}")
+        self.assertTrue(d.active)
+        d.stop()
+        self.assertFalse(d.active)

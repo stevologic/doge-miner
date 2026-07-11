@@ -6,6 +6,7 @@ import uvicorn
 import os
 from . import miner as _miner_mod
 from . import chain
+from . import localdns
 from .pools import POOLS, get_pool
 from .wallet_validation import is_valid_doge_wallet
 the_miner = _miner_mod.miner
@@ -85,6 +86,27 @@ class StatsResponse(BaseModel):
     effort_text: str = "SEARCHING"
     # Backend stdout messages (from miner prints) streamed to live feed
     backend_logs: list = []
+
+@app.on_event("startup")
+async def announce_local_dns():
+    """Advertise doge.local over mDNS while the server runs (fail-soft).
+    zeroconf's sync API must not run on the event loop thread (EventLoopBlocked),
+    so registration happens in a worker thread."""
+    import asyncio
+    dns = await asyncio.to_thread(localdns.start, 8000)
+    if dns.active:
+        extra = "" if dns.redirect_server is None else " (plain http://doge.local redirects here too)"
+        the_miner._log(f"UI also reachable at http://doge.local:8000 via mDNS{extra}")
+        print(f"doge.local -> {dns.ip}:8000 announced over mDNS{extra}")
+    else:
+        print(f"doge.local mDNS not active: {dns.error} (http://localhost:8000 still works)")
+
+
+@app.on_event("shutdown")
+async def retract_local_dns():
+    import asyncio
+    await asyncio.to_thread(localdns.stop)
+
 
 @app.get("/")
 async def serve_frontend():

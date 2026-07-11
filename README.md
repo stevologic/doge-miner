@@ -29,7 +29,9 @@
 | 🍎 **macOS** / 🐧 **Linux** | `./start.sh` |
 | 🐳 **Docker** | `docker compose up --build` |
 
-Then open **http://localhost:8000**, paste your public DOGE address (checksum-verified), pick a pool, hit **START MINING**. That's the whole tutorial — the default pool needs **no account**.
+Then open **http://localhost:8000** — or just **`http://doge.local`** 🐕: while the server runs it announces the `doge.local` hostname over mDNS (Bonjour), so the dashboard works by name from this machine *and any device on your network* (plain `doge.local` redirects to `:8000` when port 80 is free). Paste your public DOGE address (checksum-verified), pick a pool, hit **START MINING**. That's the whole tutorial — the default pool needs **no account**.
+
+> `.local` names resolve natively on Windows 10+/macOS; Linux needs avahi + nss-mdns (standard on desktops). Opt out with `DOGE_NO_MDNS=1`.
 
 <div align="center">
 <img src="docs/img/landing.png" alt="Setup screen: one wallet field, pool picker, START MINING" width="860">

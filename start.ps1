@@ -33,7 +33,7 @@ try {
 
 Write-Host ""
 Write-Host "✅ Backend ready."
-Write-Host "🌐 Open http://localhost:8000 in your browser"
+Write-Host "🌐 Open http://localhost:8000 — or http://doge.local (mDNS) from any device on your network"
 Write-Host "   - Pick a pool (zpool needs no registration; wallet = login)"
 Write-Host "   - Choose CPU or GPU mode and click START MINING"
 Write-Host ""
