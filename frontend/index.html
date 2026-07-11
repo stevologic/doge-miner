@@ -337,7 +337,7 @@
         </div>
         <div class="flex items-center gap-x-1.5 text-emerald-400">
           <span>✅</span>
-          <span>CPU threads + OpenCL GPU (self-tested)</span>
+          <span id="gpu-capability-note">CPU threads + OpenCL GPU (self-tested)</span>
         </div>
         <div class="flex items-center gap-x-1.5 text-emerald-400">
           <span>✅</span>
@@ -522,7 +522,7 @@
         <div class="mining-panel rounded-3xl p-4">
           <div class="flex justify-between px-2 mb-2 items-center">
             <div>
-              <span class="font-semibold">GPU UTILIZATION<span class="info" data-info="Real graphics-card load: nvidia-smi when available, otherwise the measured OpenCL kernel duty cycle (works on AMD/Intel too).">i</span></span>
+              <span class="font-semibold">GPU UTILIZATION<span class="info" id="gpu-util-info" data-info="Real graphics-card load: nvidia-smi when available, otherwise the measured OpenCL kernel duty cycle (works on AMD/Intel too).">i</span></span>
               <span class="text-xs ml-2 text-slate-500" id="gpu-panel-note">real (nvidia-smi / OpenCL duty cycle)</span>
             </div>
             <div class="text-xs font-mono text-emerald-400" id="gpu-percent">0.0%</div>
@@ -1298,6 +1298,25 @@
     }
 
     // =============== STATS POLLING ===============
+    // Name the actual detected card wherever the UI says just "GPU". The model comes
+    // from /api/stats (backend detects via nvidia-smi -> OpenCL -> OS query), so this
+    // works at page load too — not only while mining.
+    function applyDetectedGpu(s) {
+      const model = ((s.gpu_backend === 'opencl' && (s.gpu_devices || [])[0]) || s.gpu_model || '').trim();
+      if (!model) return;
+      for (const id of ['setup-mode-gpu', 'mode-gpu-btn']) {
+        const b = document.getElementById(id);
+        if (b) b.title = 'Mine on ' + model + ' (OpenCL)';
+      }
+      const cap = document.getElementById('gpu-capability-note');
+      if (cap) cap.textContent = 'CPU threads + OpenCL on ' + model + ' (self-tested)';
+      const icon = document.getElementById('gpu-util-info');
+      if (icon) icon.dataset.info = 'Real load of your ' + model + ': nvidia-smi when available, otherwise the measured OpenCL kernel duty cycle (works on AMD/Intel too).';
+      // while mining the poll handler owns this note ("mining on … — util via …")
+      const note = document.getElementById('gpu-panel-note');
+      if (note && !s.running) note.textContent = model + ' — util via nvidia-smi / duty cycle';
+    }
+
     async function fetchAndUpdateStats() {
       try {
         const res = await vfetch(`${BACKEND_URL}/api/stats`);
@@ -1400,6 +1419,7 @@
           else if (data.mode === 'gpu') mb.textContent = 'GPU mode (CPU fallback)';
           else mb.textContent = 'CPU threads (hashlib.scrypt)';
         }
+        applyDetectedGpu(data);
         const gpuNote = document.getElementById('gpu-panel-note');
         if (gpuNote) {
           const src = data.gpu_util_source === 'opencl-duty' ? 'kernel duty cycle'
@@ -1848,6 +1868,7 @@
         const res = await fetch(`${BACKEND_URL}/api/stats`);
         if (!res.ok) return;
         const s = await res.json();
+        applyDetectedGpu(s); // label the real card even before mining starts
         if (s.running) {
           state.running = true;
           backendMode = s.mode || 'cpu';
