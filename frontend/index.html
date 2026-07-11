@@ -133,6 +133,23 @@
        the clipboard API is unavailable, e.g. plain-http doge.local) */
     .sel-all, #active-wallet { -webkit-user-select: all; user-select: all; }
 
+    /* datapoint info icons + shared tooltip */
+    .info {
+      display: inline-block; margin-left: 5px; width: 13px; height: 13px;
+      line-height: 12px; text-align: center; border: 1px solid #334155;
+      border-radius: 50%; color: #64748b; font-size: 9px; font-weight: 700;
+      font-family: ui-monospace, monospace; font-style: normal;
+      cursor: help; user-select: none; vertical-align: 1px; text-transform: none;
+    }
+    .info:hover { color: #f0b90b; border-color: #f0b90b; }
+    #info-tip {
+      display: none; position: fixed; z-index: 200; max-width: 280px;
+      background: #16161c; border: 1px solid #3f3f4a; border-radius: 10px;
+      padding: 8px 12px; font-size: 12px; line-height: 1.45; color: #cbd5e1;
+      box-shadow: 0 8px 30px rgba(0,0,0,.55); pointer-events: none;
+      text-transform: none; letter-spacing: normal; font-family: system-ui, sans-serif;
+    }
+
     .fun-toast { animation: toast-pop 0.25s ease forwards; }
 
     @keyframes toast-pop {
@@ -389,7 +406,7 @@
         <div class="stat-card rounded-3xl p-3 sm:p-5 col-span-2 lg:col-span-2 border border-[#f0b90b]/20">
           <div class="flex justify-between items-start">
             <div>
-              <div class="nerd-label">CURRENT HASHRATE</div>
+              <div class="nerd-label">CURRENT HASHRATE<span class="info" data-info="How many Scrypt hashes your machine computes per second (kilohashes/s, rolling ~60s average). Every hash is one lottery ticket toward a share.">i</span></div>
               <div id="hashrate-value" class="hashrate text-xl sm:text-2xl md:text-3xl lg:text-[3.2rem] text-[#f0b90b]">0.00</div>
               <div class="text-sm text-[#f0b90b]/60 -mt-1">KH/s</div>
             </div>
@@ -404,7 +421,7 @@
         </div>
 
         <div class="stat-card rounded-3xl p-3 sm:p-5">
-          <div class="nerd-label">SHARES</div>
+          <div class="nerd-label">SHARES<span class="info" data-info="Hashes that met the pool&#39;s difficulty target and were ACCEPTED (or rejected) by the pool &mdash; this is what pools pay for. Submitted = sent; accepted/rejected = the pool&#39;s verdict.">i</span></div>
           <div class="flex items-baseline gap-x-2">
             <div id="shares-accepted" class="big-number text-xl sm:text-2xl md:text-[2.1rem] text-emerald-400">0</div>
             <div class="text-sm text-emerald-400/50">/ <span id="shares-rejected">0</span></div>
@@ -416,7 +433,7 @@
         </div>
 
         <div class="stat-card rounded-3xl p-3 sm:p-5">
-          <div class="nerd-label">WALLET BALANCE <span class="text-[9px] normal-case">(on-chain)</span></div>
+          <div class="nerd-label">WALLET BALANCE <span class="text-[9px] normal-case">(on-chain)</span><span class="info" data-info="The real balance of your wallet address, fetched live from the Dogecoin blockchain. Pool payouts land here once your credited shares reach the pool&#39;s minimum payout.">i</span></div>
           <div class="flex items-baseline">
             <div id="doge-earned" class="big-number text-xl sm:text-2xl md:text-[2.1rem] text-[#f0b90b]">0.000000</div>
             <span class="ml-1 text-[#f0b90b]/60">Ð</span>
@@ -426,11 +443,11 @@
         </div>
 
         <div class="stat-card rounded-3xl p-3 sm:p-5">
-          <div class="nerd-label">SESSION</div>
+          <div class="nerd-label">SESSION<span class="info" data-info="How long this mining session has been running.">i</span></div>
           <div id="uptime" class="big-number text-xl sm:text-2xl md:text-[2.1rem] font-mono">00:00:00</div>
           <div class="flex gap-x-4 text-xs mt-1">
-            <div><span class="text-slate-500">TOTAL HASHES</span><br><span id="total-hashes" class="font-mono">0</span></div>
-            <div><span class="text-slate-500" title="highest pool-difficulty any hash this session achieved">BEST SHARE</span><br><span id="best-share" class="font-mono text-[#f0b90b]">0</span></div>
+            <div><span class="text-slate-500">TOTAL HASHES<span class="info" data-info="Total Scrypt hashes computed this session. Each hash tests one nonce.">i</span></span><br><span id="total-hashes" class="font-mono">0</span></div>
+            <div><span class="text-slate-500" title="highest pool-difficulty any hash this session achieved">BEST SHARE<span class="info" data-info="The highest difficulty any single hash achieved this session. If this ever exceeded the network difficulty, you&#39;d have found an actual block.">i</span></span><br><span id="best-share" class="font-mono text-[#f0b90b]">0</span></div>
           </div>
         </div>
       </div>
@@ -440,7 +457,7 @@
         <div class="lg:col-span-3 mining-panel rounded-3xl p-4">
           <div class="flex justify-between px-2 mb-2 items-center">
             <div>
-              <span class="font-semibold">HASHRATE HISTORY</span>
+              <span class="font-semibold">HASHRATE HISTORY<span class="info" data-info="Your hashrate over the last few minutes &mdash; dips usually mean new jobs arriving or other programs using the machine.">i</span></span>
               <span class="text-xs ml-2 text-slate-500">last ~4 minutes</span>
             </div>
             <div class="text-xs flex items-center gap-3">
@@ -454,32 +471,32 @@
 
         <div class="lg:col-span-2 mining-panel rounded-3xl p-4 flex flex-col">
           <div class="flex justify-between text-xs mb-2 px-1">
-            <div class="font-semibold">SCRYPT EFFORT</div>
+            <div class="font-semibold">SCRYPT EFFORT<span class="info" data-info="Live view of the proof-of-work search. SEARCHING = waiting for a pool job, HASHING = crunching one right now.">i</span></div>
             <div id="effort-text" class="font-mono text-[#f0b90b]">SEARCHING</div>
           </div>
 
           <div class="flex-1 flex items-center justify-between px-2 gap-2">
             <div>
-              <div class="nerd-label">CURRENT NONCE</div>
+              <div class="nerd-label">CURRENT NONCE<span class="info" data-info="The counter value being tested right now. Mining is trying nonce after nonce until one makes the block header hash below the target.">i</span></div>
               <div id="current-nonce" class="font-mono text-lg">0x00000000</div>
             </div>
             <div class="text-right">
-              <div class="nerd-label">EFFORT</div>
+              <div class="nerd-label">EFFORT<span class="info" data-info="A progress-style % derived from real work done this session (hashes and rate). An activity meter &mdash; not a promise that a share is close.">i</span></div>
               <div id="effort-percent" class="font-mono text-lg text-[#f0b90b]">0%</div>
             </div>
           </div>
 
           <div class="mt-4 px-1 grid grid-cols-3 gap-2 text-center text-xs">
             <div class="bg-[#0c0c0f] rounded p-2 border border-[#1f1f26]">
-              <div class="text-emerald-400 text-[10px]">LUCK</div>
+              <div class="text-emerald-400 text-[10px]">LUCK<span class="info" data-info="Shares actually found vs statistically expected at the current pool difficulty. 100% = exactly on expectation; higher = running lucky.">i</span></div>
               <div id="luck-stat" class="font-mono font-semibold">100%</div>
             </div>
             <div class="bg-[#0c0c0f] rounded p-2 border border-[#1f1f26]">
-              <div class="text-emerald-400 text-[10px]">STREAK</div>
+              <div class="text-emerald-400 text-[10px]">STREAK<span class="info" data-info="Consecutive accepted shares without a rejection.">i</span></div>
               <div id="streak-stat" class="font-mono font-semibold">0</div>
             </div>
             <div class="bg-[#0c0c0f] rounded p-2 border border-[#1f1f26]">
-              <div class="text-emerald-400 text-[10px]">EFFICIENCY</div>
+              <div class="text-emerald-400 text-[10px]">EFFICIENCY<span class="info" data-info="Accepted &divide; (accepted + rejected) shares. Near 100% means the pool agrees with virtually all of your work.">i</span></div>
               <div id="efficiency-stat" class="font-mono font-semibold">100%</div>
             </div>
           </div>
@@ -491,7 +508,7 @@
         <div class="mining-panel rounded-3xl p-4">
           <div class="flex justify-between px-2 mb-2 items-center">
             <div>
-              <span class="font-semibold">CPU UTILIZATION</span>
+              <span class="font-semibold">CPU UTILIZATION<span class="info" data-info="Real processor load measured with psutil &mdash; it matches Task Manager / Activity Monitor.">i</span></span>
               <span class="text-xs ml-2 text-slate-500">real (psutil)</span>
             </div>
             <div class="text-xs font-mono text-emerald-400" id="cpu-percent">0.0%</div>
@@ -504,7 +521,7 @@
         <div class="mining-panel rounded-3xl p-4">
           <div class="flex justify-between px-2 mb-2 items-center">
             <div>
-              <span class="font-semibold">GPU UTILIZATION</span>
+              <span class="font-semibold">GPU UTILIZATION<span class="info" data-info="Real graphics-card load: nvidia-smi when available, otherwise the measured OpenCL kernel duty cycle (works on AMD/Intel too).">i</span></span>
               <span class="text-xs ml-2 text-slate-500" id="gpu-panel-note">real (nvidia-smi / OpenCL duty cycle)</span>
             </div>
             <div class="text-xs font-mono text-emerald-400" id="gpu-percent">0.0%</div>
@@ -531,34 +548,34 @@
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-3 sm:gap-x-4 gap-y-2 sm:gap-y-3 text-xs sm:text-sm nerd-box rounded-2xl p-3 sm:p-4">
             <div>
-              <div class="nerd-label">BLOCK HEIGHT <span class="text-[8px]">(live chain)</span></div>
+              <div class="nerd-label">BLOCK HEIGHT <span class="text-[8px]">(live chain)</span><span class="info" data-info="How many blocks the Dogecoin blockchain contains right now &mdash; live from public explorers, about one new block per minute.">i</span></div>
               <div id="block-height" class="font-mono text-xl">—</div>
             </div>
             <div>
-              <div class="nerd-label">NET DIFFICULTY</div>
+              <div class="nerd-label">NET DIFFICULTY<span class="info" data-info="How hard it currently is to find a Dogecoin block. Automatically scales with the total hashpower of the whole network.">i</span></div>
               <div id="net-difficulty" class="font-mono text-xl">—</div>
             </div>
 
             <div>
-              <div class="nerd-label">SCRYPT PARAMS</div>
+              <div class="nerd-label">SCRYPT PARAMS<span class="info" data-info="Dogecoin&#39;s proof-of-work function: scrypt with N=1024, r=1, p=1 &mdash; memory-hard, the same function this miner computes.">i</span></div>
               <div class="font-mono text-[#f0b90b] scrypt-visual">N=1024 • r=1 • p=1</div>
             </div>
             <div>
-              <div class="nerd-label">SHARE TARGET <span class="text-[8px]">(pool diff <span id="pool-diff">—</span>)</span></div>
+              <div class="nerd-label">SHARE TARGET <span class="text-[8px]">(pool diff <span id="pool-diff">—</span>)</span><span class="info" data-info="Your hash, read as a 256-bit number, must be BELOW this target to count as a share. The pool sets it via difficulty: higher diff = smaller target = rarer shares.">i</span></div>
               <div id="target-hex" class="font-mono text-xs break-all text-emerald-400">—</div>
             </div>
 
             <div>
-              <div class="nerd-label">LAST HASH (scrypt PoW)</div>
+              <div class="nerd-label">LAST HASH (scrypt PoW)<span class="info" data-info="The most recent scrypt hash your miner produced (display byte order). More leading zeros = closer to a share.">i</span></div>
               <div id="last-hash" class="font-mono text-xs text-slate-400 break-all">—</div>
             </div>
             <div>
-              <div class="nerd-label">NONCES SEARCHED</div>
+              <div class="nerd-label">NONCES SEARCHED<span class="info" data-info="Same count as total hashes &mdash; every hash tests exactly one nonce value.">i</span></div>
               <div id="nonces-searched" class="font-mono text-lg">0</div>
             </div>
 
             <div class="col-span-2 pt-1 border-t border-[#1f1f26] mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs">
-              <div><span class="text-slate-500">THREADS</span> <span id="threads" class="font-mono">1</span></div>
+              <div><span class="text-slate-500">THREADS<span class="info" data-info="Resources this session: worker threads hashing (1 driver thread in GPU mode), memory and CPU/GPU load, and which engine is mining (CPU threads or OpenCL).">i</span></span> <span id="threads" class="font-mono">1</span></div>
               <div><span class="text-slate-500">MEM</span> <span id="mem-used" class="font-mono">0%</span></div>
               <div><span class="text-slate-500">CPU</span> <span id="cpu-load" class="font-mono">0%</span></div>
               <div><span class="text-slate-500">GPU</span> <span id="gpu-load" class="font-mono">0%</span></div>
@@ -595,12 +612,12 @@
       </div>
 
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mb-3 text-center">
-        <div class="chain-chip"><div class="nerd-label">HEIGHT</div><div id="chain-height" class="font-mono text-sm sm:text-base">—</div></div>
-        <div class="chain-chip"><div class="nerd-label">DIFFICULTY</div><div id="chain-difficulty" class="font-mono text-sm sm:text-base">—</div></div>
-        <div class="chain-chip"><div class="nerd-label">NET HASHRATE</div><div id="chain-hashrate" class="font-mono text-sm sm:text-base">—</div></div>
-        <div class="chain-chip"><div class="nerd-label">PRICE (USD)</div><div id="chain-price" class="font-mono text-sm sm:text-base">—</div></div>
-        <div class="chain-chip"><div class="nerd-label">MEMPOOL TX</div><div id="chain-mempool" class="font-mono text-sm sm:text-base">—</div></div>
-        <div class="chain-chip"><div class="nerd-label">BLOCKS 24H</div><div id="chain-blocks24" class="font-mono text-sm sm:text-base">—</div></div>
+        <div class="chain-chip"><div class="nerd-label">HEIGHT<span class="info" data-info="Current length of the Dogecoin blockchain, in blocks.">i</span></div><div id="chain-height" class="font-mono text-sm sm:text-base">—</div></div>
+        <div class="chain-chip"><div class="nerd-label">DIFFICULTY<span class="info" data-info="Network-wide difficulty of finding a block right now.">i</span></div><div id="chain-difficulty" class="font-mono text-sm sm:text-base">—</div></div>
+        <div class="chain-chip"><div class="nerd-label">NET HASHRATE<span class="info" data-info="Estimated hashpower of the entire Dogecoin network, derived from difficulty (difficulty &times; 2&sup3;&sup2; &divide; 60s block time).">i</span></div><div id="chain-hashrate" class="font-mono text-sm sm:text-base">—</div></div>
+        <div class="chain-chip"><div class="nerd-label">PRICE (USD)<span class="info" data-info="Live DOGE price from CoinGecko (Blockchair fallback), cached server-side.">i</span></div><div id="chain-price" class="font-mono text-sm sm:text-base">—</div></div>
+        <div class="chain-chip"><div class="nerd-label">MEMPOOL TX<span class="info" data-info="Transactions broadcast to the network but not yet included in a block &mdash; the waiting room.">i</span></div><div id="chain-mempool" class="font-mono text-sm sm:text-base">—</div></div>
+        <div class="chain-chip"><div class="nerd-label">BLOCKS 24H<span class="info" data-info="Blocks mined network-wide in the last 24 hours (~1440 expected at one per minute).">i</span></div><div id="chain-blocks24" class="font-mono text-sm sm:text-base">—</div></div>
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
@@ -1446,6 +1463,42 @@
     // Copy that also works on non-secure contexts (http://doge.local): the async
     // Clipboard API only exists on secure origins (https / localhost), so fall back
     // to the legacy execCommand path, and finally to select-the-text + Ctrl+C.
+    // ---- datapoint info tooltips (hover to peek, click/tap to pin) ----
+    let _tipPinned = null;
+    function initInfoTips() {
+      const tip = document.createElement('div');
+      tip.id = 'info-tip';
+      document.body.appendChild(tip);
+      const show = (el) => {
+        tip.innerHTML = el.dataset.info || '';
+        tip.style.display = 'block';
+        tip.style.left = '0px'; tip.style.top = '0px';
+        const r = el.getBoundingClientRect();
+        const tw = tip.offsetWidth, th = tip.offsetHeight;
+        let x = Math.min(Math.max(8, r.left + r.width / 2 - tw / 2), window.innerWidth - tw - 8);
+        let y = r.top - th - 8;
+        if (y < 8) y = r.bottom + 8;
+        tip.style.left = x + 'px';
+        tip.style.top = y + 'px';
+      };
+      const hide = () => { tip.style.display = 'none'; _tipPinned = null; };
+      document.addEventListener('mouseover', (e) => {
+        const i = e.target.closest('.info');
+        if (i && !_tipPinned) show(i);
+      });
+      document.addEventListener('mouseout', (e) => {
+        if (e.target.closest('.info') && !_tipPinned) hide();
+      });
+      document.addEventListener('click', (e) => {
+        const i = e.target.closest('.info');
+        if (i) { e.preventDefault(); e.stopPropagation(); if (_tipPinned === i) hide(); else { _tipPinned = i; show(i); } }
+        else if (_tipPinned) hide();
+      });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hide(); });
+      window.addEventListener('scroll', hide, true);
+      window.addEventListener('resize', hide);
+    }
+
     function copyText(text) {
       if (navigator.clipboard && window.isSecureContext) {
         return navigator.clipboard.writeText(text).then(() => true).catch(() => copyTextLegacy(text));
@@ -1808,6 +1861,7 @@
       setMiningMode('cpu');
       updateMiningButtons(false);
       updateVerboseButton();
+      initInfoTips();
 
       ['workers-input', 'setup-workers-input'].forEach(id => {
         const el = document.getElementById(id);
