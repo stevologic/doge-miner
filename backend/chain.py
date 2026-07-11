@@ -53,7 +53,7 @@ def _default_http_get_json(url: str, timeout: float = 8.0) -> Any:
         _tell(f"chain: GET {_short_url(url)} ok ({(time.time()-t0)*1000:.0f} ms)")
         return data
     except Exception as e:
-        _tell(f"chain: GET {_short_url(url)} failed ({e.__class__.__name__}) — trying next provider")
+        _tell(f"chain: GET {_short_url(url)} failed ({e.__class__.__name__}) - trying next provider")
         raise
 
 

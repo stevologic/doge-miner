@@ -5,6 +5,7 @@
       "name": "doge-miner",
       "runtimeExecutable": "python",
       "runtimeArgs": [
+        "-u",
         "-m",
         "uvicorn",
         "backend.main:app",

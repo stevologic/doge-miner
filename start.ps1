@@ -41,4 +41,10 @@ Write-Host "   - Pick a pool (zpool needs no registration; wallet = login)"
 Write-Host "   - Choose CPU or GPU mode and click START MINING"
 Write-Host ""
 
-& $venvPy -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
+Write-Host "Live activity (stratum wire, hashing, shares, chain requests) streams below."
+Write-Host "Verbose lines are tagged [v]. The browser live feed mirrors this with a VERBOSE toggle."
+Write-Host ""
+
+# -u = unbuffered stdout so verbose data appears live in this terminal
+$env:PYTHONUNBUFFERED = "1"
+& $venvPy -u -m uvicorn backend.main:app --host 0.0.0.0 --port 8000

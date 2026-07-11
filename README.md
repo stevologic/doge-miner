@@ -48,7 +48,7 @@ Then open **http://localhost:8000** — or just **`http://doge.local`** 🐕: wh
 | 🧵 | **CPU threads that scale** | `hashlib.scrypt` releases the GIL (~3.8× on 4 threads). Header prefixes cached per job — each hash only packs a nonce. |
 | ⛓️ | **Key-free blockchain explorer** | Height, difficulty, network hashrate, price, mempool, recent blocks, address & tx lookups. Multi-provider failover (Blockbook → Blockchair → BlockCypher, CoinGecko price) with server-side caching — you never touch an API key or a rate limit. |
 | 📊 | **Telemetry with no fiction** | Rolling hashrate, shares submitted/accepted/rejected, pool difficulty + exact share target, last PoW hash, best-share difficulty, statistical luck, CPU/MEM (psutil), GPU util (nvidia-smi or OpenCL duty cycle), on-chain balance. |
-| 📜 | **A live feed of actual work** | Watch the miner mine: 5-second hashing heartbeats, and a VERBOSE toggle exposing raw stratum wire traffic, per-worker nonce sweeps, GPU batch stats and every API request. |
+| 📜 | **A live feed of actual work** | Watch the miner mine in two places: the browser feed (VERBOSE toggle) **and** the terminal running the server — every event streams to stdout in real time (unbuffered), with wire/telemetry lines tagged `[v]` so you can `grep` them. Stratum traffic, per-worker nonce sweeps, GPU batch stats, chain requests, hashing heartbeats. |
 
 <div align="center">
 <img src="docs/img/telemetry.png" alt="Nerd mode and live feed: share target, last scrypt hash, per-worker nonce sweeps" width="920">

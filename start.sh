@@ -28,4 +28,9 @@ echo "   - Pick a pool (zpool needs no registration; wallet = login)"
 echo "   - Choose CPU or GPU mode and click START MINING"
 echo ""
 
-python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
+echo "Live activity (stratum wire, hashing, shares, chain requests) streams below."
+echo "Verbose lines are tagged [v]. The browser live feed mirrors this with a VERBOSE toggle."
+echo ""
+
+# -u = unbuffered stdout so verbose data appears live in this terminal
+PYTHONUNBUFFERED=1 python -u -m uvicorn backend.main:app --host 0.0.0.0 --port 8000

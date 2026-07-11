@@ -15,4 +15,5 @@ COPY frontend/ ./frontend/
 
 EXPOSE 8000
 
-CMD ["python", "-m", "uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# -u: unbuffered stdout so verbose activity streams live in `docker logs`
+CMD ["python", "-u", "-m", "uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]

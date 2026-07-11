@@ -461,21 +461,27 @@ class DogeMiner:
         self._pool_connect_thread = None
 
     def _log(self, message: str, verbose: bool = False):
-        """Append to buffer (for /api/stats live feed) and print to stdout (docker/terminal).
-        verbose entries are wire/telemetry chatter (stratum traffic, progress ticks, provider
-        requests); the UI shows them only when its VERBOSE toggle is on."""
+        """Append to the live-feed buffer AND stream to stdout (CLI/terminal, docker logs).
+
+        Every line — normal events and verbose wire/telemetry chatter alike — is printed
+        to stdout so the terminal shows exactly what the miner is doing in real time.
+        Verbose lines are tagged `[v]` in stdout so you can eyeball or `grep` them; the
+        browser live-feed text stays clean and gates verbose lines behind its toggle.
+        Output is flushed so nothing sits in a buffer waiting for the process to exit."""
         self._log_id += 1
         entry = {"id": self._log_id, "msg": message, "v": verbose}
         self._recent_logs.append(entry)
         if len(self._recent_logs) > 200:
             self._recent_logs.pop(0)
+        line = ("[v] " + message) if verbose else message
         # stdout may be a legacy Windows codepage (cp1252) that can't encode e.g. the
         # arrow characters used in wire logs; logging must never raise into callers
-        # (a UnicodeEncodeError here used to kill worker threads mid-submit).
+        # (a UnicodeEncodeError here used to kill worker threads mid-submit). flush=True
+        # so verbose data appears live in the CLI regardless of pipe/block buffering.
         try:
-            print(message)
+            print(line, flush=True)
         except UnicodeEncodeError:
-            print(message.encode("ascii", "replace").decode("ascii"))
+            print(line.encode("ascii", "replace").decode("ascii"), flush=True)
         except Exception:
             pass
 
@@ -706,7 +712,7 @@ class DogeMiner:
                         window_best = sdiff
                     if window_hashes >= 1000:
                         self._log(
-                            f"worker {worker_id:02d}: swept 0x{window_start_nonce:08x}→0x{nonce:08x} "
+                            f"worker {worker_id:02d}: swept 0x{window_start_nonce:08x}->0x{nonce:08x} "
                             f"(+{window_hashes:,} scrypt hashes), window best diff {window_best:.4f}",
                             verbose=True)
                         window_hashes = 0
@@ -724,7 +730,7 @@ class DogeMiner:
                                     self.sock.sendall(submit.encode())
                                     with self.lock:
                                         self.shares_submitted += 1
-                                    self._log(f"→ mining.submit job={job.get('job_id','')} nonce={nonce:08x} share_diff={sdiff:.3f}", verbose=True)
+                                    self._log(f"-> mining.submit job={job.get('job_id','')} nonce={nonce:08x} share_diff={sdiff:.3f}", verbose=True)
                                 except (OSError, socket.error, AttributeError):
                                     self.connected = False  # trigger watchdog reconnect
                         # accepted/rejected ONLY from pool _handle_stratum responses
@@ -842,7 +848,7 @@ class DogeMiner:
                             with self.lock:
                                 self.shares_submitted += 1
                             self._log(
-                                f"→ mining.submit job={job.get('job_id','')} nonce={n:08x} "
+                                f"-> mining.submit job={job.get('job_id','')} nonce={n:08x} "
                                 f"share_diff={share_difficulty(hash_result):.3f} (CPU-verified)",
                                 verbose=True)
                         except (OSError, socket.error, AttributeError):
@@ -1030,12 +1036,12 @@ class DogeMiner:
                     sub = self._format_subscribe()
                     with self.send_lock:
                         self.sock.sendall(sub.encode())
-                    self._log(f"→ mining.subscribe {self.pool_host}:{self.pool_port}", verbose=True)
+                    self._log(f"-> mining.subscribe {self.pool_host}:{self.pool_port}", verbose=True)
                     # authorize (wallet for no-reg pools, account.worker for registered)
                     auth = self._format_authorize(self.pool_user or self.wallet, self.pool_pass)
                     with self.send_lock:
                         self.sock.sendall(auth.encode())
-                    self._log(f"→ mining.authorize {self.pool_user or self.wallet} (pass: {self.pool_pass})", verbose=True)
+                    self._log(f"-> mining.authorize {self.pool_user or self.wallet} (pass: {self.pool_pass})", verbose=True)
                     # ask for a share difficulty matched to hobby hashrates; pools that
                     # honor mining.suggest_difficulty give frequent shares (so workers
                     # appear on pool dashboards quickly), others simply ignore it
@@ -1044,7 +1050,7 @@ class DogeMiner:
                         s_msg = self._format_suggest_difficulty(sug)
                         with self.send_lock:
                             self.sock.sendall(s_msg.encode())
-                        self._log(f"→ mining.suggest_difficulty {sug:g}", verbose=True)
+                        self._log(f"-> mining.suggest_difficulty {sug:g}", verbose=True)
 
                     # start recv loop (real one, even for queued)
                     self.recv_thread = threading.Thread(target=self._recv_loop, daemon=True)
@@ -1114,9 +1120,9 @@ class DogeMiner:
                     and self._connected_at
                     and time.time() - self._connected_at > self.auth_grace_seconds):
                 self._auth_warned = True
-                self.pool_error = ("pool has not confirmed authorization — "
+                self.pool_error = ("pool has not confirmed authorization - "
                                    "check pool username/worker and password")
-                self._log("WARNING: pool has not confirmed authorization — shares may be "
+                self._log("WARNING: pool has not confirmed authorization - shares may be "
                           "discarded. Check your pool username/worker (registered pools need "
                           "an account).")
             for _ in range(4):
@@ -1131,15 +1137,15 @@ class DogeMiner:
             if method == "mining.set_difficulty":
                 with self.job_lock:
                     self.difficulty = self._parse_difficulty(params)
-                self._log(f"← mining.set_difficulty {self.difficulty:g}", verbose=True)
+                self._log(f"<- mining.set_difficulty {self.difficulty:g}", verbose=True)
             elif method == "mining.notify":
                 job = self._parse_notify(params)
                 with self.job_lock:
                     if job:
                         self.current_job = job
                 if job:
-                    clean = " (clean — restart nonce search)" if job.get("clean") else ""
-                    self._log(f"← mining.notify job={job.get('job_id')} nbits={job.get('nbits')}{clean}", verbose=True)
+                    clean = " (clean - restart nonce search)" if job.get("clean") else ""
+                    self._log(f"<- mining.notify job={job.get('job_id')} nbits={job.get('nbits')}{clean}", verbose=True)
             elif method == "mining.set_extranonce":
                 # some multipools (zpool/zergpool family) rotate extranonce mid-session
                 try:
@@ -1150,7 +1156,7 @@ class DogeMiner:
                                 self.extranonce2_size = int(params[1])
                 except (TypeError, ValueError, IndexError):
                     pass
-                self._log(f"← mining.set_extranonce {self.extranonce1}/{self.extranonce2_size}", verbose=True)
+                self._log(f"<- mining.set_extranonce {self.extranonce1}/{self.extranonce2_size}", verbose=True)
             elif method == "client.get_version":
                 # some pools probe clients and may drop those that ignore the request
                 if msg.get("id") is not None:
@@ -1162,7 +1168,7 @@ class DogeMiner:
                                 self.sock.sendall(reply.encode())
                             except (OSError, socket.error, AttributeError):
                                 pass
-                self._log("← client.get_version (answered)", verbose=True)
+                self._log("<- client.get_version (answered)", verbose=True)
             elif method == "client.show_message":
                 if params:
                     self._log(f"pool message: {params[0]}")
@@ -1197,7 +1203,7 @@ class DogeMiner:
                         self.extranonce1 = res[1] if isinstance(res[1], str) else ""
                         if len(res) > 2:
                             self.extranonce2_size = int(res[2])
-                    self._log(f"← subscribed: extranonce1={self.extranonce1} en2size={self.extranonce2_size}", verbose=True)
+                    self._log(f"<- subscribed: extranonce1={self.extranonce1} en2size={self.extranonce2_size}", verbose=True)
                 except (TypeError, ValueError, IndexError, KeyError):
                     pass
 
