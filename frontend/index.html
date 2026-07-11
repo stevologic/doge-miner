@@ -626,6 +626,13 @@
         <span>REAL POOL MINING RUNS IN THE PYTHON BACKEND. Educational project — CPU/GPU hashrates are far below ASICs; payouts come from your chosen pool, not this app.</span>
       </div>
     </div>
+
+    <!-- DONATE (subtle, same as the project site) -->
+    <div class="mt-3 pt-3 border-t border-dashed border-[#1f1f26] flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[11px] text-slate-500">
+      <span>🐕 Free forever — but tokens aren't cheap. If this miner made you smile, a little Ð for the creator goes a long way:</span>
+      <code class="font-mono bg-[#0c0c0f] border border-[#1f1f26] rounded px-2 py-0.5 text-slate-400 break-all">DTW2M5oEW97WbmYJRM71qD7uE6xfJs1MUK</code>
+      <button onclick="copyDonate(this)" class="doge-btn px-2 py-0.5 border border-[#3f3f4a] rounded text-slate-500 hover:text-[#f0b90b] hover:border-[#f0b90b]">copy</button>
+    </div>
   </div>
 
   <!-- CONFIG MODAL -->
@@ -1417,6 +1424,13 @@
       var lk = document.getElementById('luck-stat'); if (lk) lk.textContent = (data.luck || 100).toFixed(1) + '%';
       var sk = document.getElementById('streak-stat'); if (sk) sk.textContent = (data.streak || 0);
       var ef = document.getElementById('efficiency-stat'); if (ef) ef.textContent = (data.efficiency || 100).toFixed(1) + '%';
+    }
+
+    function copyDonate(btn) {
+      navigator.clipboard.writeText('DTW2M5oEW97WbmYJRM71qD7uE6xfJs1MUK').then(() => {
+        if (btn) { btn.textContent = 'copied ✓'; setTimeout(() => { btn.textContent = 'copy'; }, 1800); }
+        showToast('Much thanks!', 'Ð address copied — such generosity, wow', '#f0b90b');
+      }).catch(() => {});
     }
 
     function copyNerdStats() {
