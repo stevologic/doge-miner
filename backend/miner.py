@@ -238,12 +238,89 @@ def compute_effort_text(total_hashes: int, running: bool) -> str:
     return "HASHING" if total_hashes > 0 else "SEARCHING"
 
 
+def expected_seconds_per_share(difficulty: float, hashrate_khs: float) -> float:
+    """Statistically expected wall-time between accepted shares at a given pool
+    difficulty and hashrate. A share needs a hash below diff-1_target/difficulty,
+    which happens on average once per difficulty*2^32/65535 hashes.
+    Returns 0 when unknown (no hashrate yet)."""
+    hps = hashrate_khs * 1000.0
+    if difficulty <= 0 or hps <= 0:
+        return 0.0
+    hashes_per_share = difficulty * 4294967296.0 / 65535.0
+    return hashes_per_share / hps
+
+
 def duty_percent(busy_delta: float, wall_delta: float) -> float:
     """GPU utilization as kernel duty cycle: fraction of wall time spent executing
     OpenCL batches. Real, vendor-neutral fallback where nvidia-smi doesn't exist."""
     if wall_delta <= 0 or busy_delta < 0:
         return 0.0
     return max(0.0, min(100.0, busy_delta / wall_delta * 100.0))
+
+
+_GPU_MODEL_CACHE: Optional[str] = None
+
+
+def detect_gpu_model() -> str:
+    """Best-effort model name of this machine's GPU, independent of mining mode.
+    Order: nvidia-smi -> OpenCL device list (prefers discrete) -> OS query."""
+    global _GPU_MODEL_CACHE
+    if _GPU_MODEL_CACHE is not None:
+        return _GPU_MODEL_CACHE
+    name = ""
+    if shutil.which("nvidia-smi"):
+        try:
+            out = subprocess.check_output(
+                ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
+                stderr=subprocess.DEVNULL, timeout=2.5,
+            ).decode("utf-8", errors="ignore").strip()
+            name = out.splitlines()[0].strip() if out else ""
+        except Exception:
+            pass
+    if not name:
+        try:
+            import pyopencl as cl
+            gpus = []
+            for plat in cl.get_platforms():
+                gpus.extend(plat.get_devices(device_type=cl.device_type.GPU))
+            if gpus:
+                def score(d):
+                    try:
+                        return (0 if d.host_unified_memory else 1, d.global_mem_size)
+                    except Exception:
+                        return (0, 0)
+                name = max(gpus, key=score).name.strip()
+        except Exception:
+            pass
+    if not name and os.name == "nt":
+        try:
+            out = subprocess.check_output(
+                ["wmic", "path", "win32_VideoController", "get", "name"],
+                stderr=subprocess.DEVNULL, timeout=4.0,
+            ).decode("utf-8", errors="ignore")
+            cards = [l.strip() for l in out.splitlines()[1:] if l.strip()]
+            discrete = [c for c in cards if any(k in c.upper() for k in ("NVIDIA", "GEFORCE", "RTX", "GTX", "RADEON", "RX ", "ARC "))]
+            name = (discrete or cards or [""])[0]
+        except Exception:
+            pass
+    if not name and shutil.which("lspci"):
+        try:
+            out = subprocess.check_output(["lspci"], stderr=subprocess.DEVNULL, timeout=4.0).decode("utf-8", errors="ignore")
+            for line in out.splitlines():
+                if "VGA" in line or "3D controller" in line:
+                    name = line.split(":", 2)[-1].strip()
+                    break
+        except Exception:
+            pass
+    _GPU_MODEL_CACHE = name
+    return name
+
+
+def _warm_gpu_model_cache():
+    threading.Thread(target=detect_gpu_model, daemon=True).start()
+
+
+_warm_gpu_model_cache()
 
 
 class QueuedStratumSocket:
@@ -337,6 +414,7 @@ class DogeMiner:
         self.pool_user = ""   # stratum username (wallet for no-reg pools, account.worker for registered)
         self.pool_pass = "c=DOGE"
         self.pool_error = ""  # last connect/protocol error for UI telemetry
+        self.suggest_difficulty = 0.0  # sent via mining.suggest_difficulty when > 0
         self.sock = None
         self.recv_thread = None
         self.current_job: Dict[str, Any] = None
@@ -412,6 +490,9 @@ class DogeMiner:
 
     def _format_authorize(self, user: str, password: str = "x") -> str:
         return json.dumps({"id": 2, "method": "mining.authorize", "params": [user, password]}) + "\n"
+
+    def _format_suggest_difficulty(self, diff: float) -> str:
+        return json.dumps({"id": 3, "method": "mining.suggest_difficulty", "params": [diff]}) + "\n"
 
     def _format_submit(self, user: str, job_id: str, extranonce2: str, ntime: str, nonce: str) -> str:
         return json.dumps({
@@ -805,6 +886,14 @@ class DogeMiner:
         self.best_share_diff = 0.0
         self.pool_error = ""
         self._rate_samples = []
+        # sensible per-mode share cadence if the pool honors suggest_difficulty
+        # (~1 share/2min CPU, ~1 share/min GPU at typical hobby hashrates);
+        # override with DOGE_SUGGEST_DIFF, 0 disables
+        try:
+            env_sug = float(os.environ.get("DOGE_SUGGEST_DIFF", ""))
+        except ValueError:
+            env_sug = -1.0
+        self.suggest_difficulty = env_sug if env_sug >= 0 else (256.0 if mode == "gpu" else 8.0)
         self.start_time = time.time()
 
         if workers is not None and workers > 0:
@@ -947,6 +1036,15 @@ class DogeMiner:
                     with self.send_lock:
                         self.sock.sendall(auth.encode())
                     self._log(f"→ mining.authorize {self.pool_user or self.wallet} (pass: {self.pool_pass})", verbose=True)
+                    # ask for a share difficulty matched to hobby hashrates; pools that
+                    # honor mining.suggest_difficulty give frequent shares (so workers
+                    # appear on pool dashboards quickly), others simply ignore it
+                    sug = self.suggest_difficulty
+                    if sug and sug > 0:
+                        s_msg = self._format_suggest_difficulty(sug)
+                        with self.send_lock:
+                            self.sock.sendall(s_msg.encode())
+                        self._log(f"→ mining.suggest_difficulty {sug:g}", verbose=True)
 
                     # start recv loop (real one, even for queued)
                     self.recv_thread = threading.Thread(target=self._recv_loop, daemon=True)
@@ -1185,6 +1283,8 @@ class DogeMiner:
                 "gpu_backend": self.gpu_backend,
                 "gpu_devices": list(self.gpu_device_names),
                 "gpu_util_source": self.gpu_util_source,
+                "gpu_model": detect_gpu_model(),
+                "expected_share_seconds": round(expected_seconds_per_share(self.difficulty, self.current_hashrate), 1),
                 # Real datapoints for SCRYPT EFFORT div (no illustrative values)
                 "effort_percent": effort_percent,
                 "current_nonce": current_nonce,

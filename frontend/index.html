@@ -359,6 +359,7 @@
             <span id="pool-info" class="min-w-0">Connecting to pool…</span>
             <span id="worker-id" class="whitespace-nowrap text-[#f0b90b]/70"></span>
           </div>
+          <div id="pool-hint" class="hidden text-[11px] text-amber-400/90 mt-1 max-w-2xl leading-snug"></div>
         </div>
 
         <div class="flex items-center gap-1 sm:gap-2 flex-nowrap">
@@ -643,11 +644,8 @@
     </div>
 
     <!-- BOTTOM BAR -->
-    <div class="mt-6 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs">
-      <div class="flex-1"></div>
-      <div class="text-[10px] text-slate-500 flex items-center gap-x-2">
-        <span>REAL POOL MINING RUNS IN THE PYTHON BACKEND. Educational project — CPU/GPU hashrates are far below ASICs; payouts come from your chosen pool, not this app.</span>
-      </div>
+    <div class="mt-6 flex justify-center text-center text-[10px] text-slate-500">
+      <span>REAL POOL MINING RUNS IN THE PYTHON BACKEND. Educational project — CPU/GPU hashrates are far below ASICs; payouts come from your chosen pool, not this app.</span>
     </div>
 
     <!-- PROJECT LINKS -->
@@ -789,6 +787,16 @@
       if (n >= 1e6) return (n / 1e6).toFixed(digits || 1) + "M";
       if (n >= 1e3) return (n / 1e3).toFixed(digits || 1) + "K";
       return n.toLocaleString();
+    }
+
+    function fmtDuration(secs) {
+      secs = Math.max(0, Math.round(secs || 0));
+      if (secs < 90) return secs + ' sec';
+      const m = secs / 60;
+      if (m < 90) return m.toFixed(0) + ' min';
+      const h = m / 60;
+      if (h < 36) return h.toFixed(1) + ' hours';
+      return (h / 24).toFixed(1) + ' days';
     }
 
     function formatUptime(secs) {
@@ -1396,8 +1404,9 @@
         if (gpuNote) {
           const src = data.gpu_util_source === 'opencl-duty' ? 'kernel duty cycle'
                     : data.gpu_util_source === 'nvidia-smi' ? 'nvidia-smi' : 'nvidia-smi / duty cycle';
-          if (data.gpu_backend === 'opencl') gpuNote.textContent = 'mining on ' + ((data.gpu_devices || [])[0] || 'OpenCL device') + ' — util via ' + src;
-          else gpuNote.textContent = 'real (' + src + ')';
+          const model = (data.gpu_backend === 'opencl' && (data.gpu_devices || [])[0]) || data.gpu_model || '';
+          if (data.gpu_backend === 'opencl') gpuNote.textContent = 'mining on ' + (model || 'OpenCL device') + ' — util via ' + src;
+          else gpuNote.textContent = (model ? model + ' — ' : '') + 'util via ' + src;
         }
 
         // pool status line
@@ -1414,6 +1423,23 @@
           if (data.pool_link) parts.push(seg(`<a href="${esc(data.pool_link)}" target="_blank" rel="noopener" class="underline hover:text-[#f0b90b]">[pool stats]</a>`));
           if (data.worker_link) parts.push(seg(`<a href="${esc(data.worker_link)}" target="_blank" rel="noopener" class="underline hover:text-[#f0b90b]" title="Per-worker detail from the pool (live miners, balances, payouts)">[worker stats]</a>`));
           pi.innerHTML = parts.join(' ');
+
+          // Explain the #1 support question: "my worker isn't on the pool dashboard".
+          // Most pools list a worker only after its first ACCEPTED share; when the pool
+          // pins a high difficulty relative to your hashrate, that can be hours/days away.
+          const hintEl = document.getElementById('pool-hint');
+          if (hintEl) {
+            const est = data.expected_share_seconds || 0;
+            if (data.pool_connected && data.pool_authorized && (data.shares_accepted || 0) === 0 && est > 180) {
+              hintEl.innerHTML = '⚠️ Connected & authorized, but pool difficulty is <b>' + (data.pool_difficulty || 0) +
+                '</b> — at your hashrate the first accepted share is ~<b>' + fmtDuration(est) +
+                '</b> away. Most pool dashboards (incl. AikaPool) only show a worker after its first accepted share, so it may not appear yet. ' +
+                'Tip: use a pool/port with lower or variable difficulty, or the no-registration zpool default.';
+              hintEl.classList.remove('hidden');
+            } else {
+              hintEl.classList.add('hidden');
+            }
+          }
         }
 
         // effort datapoints (all real)

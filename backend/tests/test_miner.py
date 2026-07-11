@@ -694,3 +694,49 @@ class TestLocalDns(unittest.TestCase):
         self.assertTrue(d.active)
         d.stop()
         self.assertFalse(d.active)
+
+
+class TestGpuModelAndSuggestDiff(unittest.TestCase):
+    def test_detect_gpu_model_returns_string(self):
+        from backend.miner import detect_gpu_model
+        m = detect_gpu_model()
+        self.assertIsInstance(m, str)  # may be empty on headless machines
+
+    def test_stats_include_gpu_model(self):
+        m = DogeMiner()
+        self.assertIn("gpu_model", m.get_stats())
+
+    def test_suggest_difficulty_formatter(self):
+        m = DogeMiner()
+        msg = m._format_suggest_difficulty(64.0)
+        self.assertIn("mining.suggest_difficulty", msg)
+        self.assertIn("64", msg)
+
+    def test_suggest_difficulty_sent_on_connect(self):
+        m = DogeMiner()
+        q = QueuedStratumSocket()
+        q.push(b'{"id":1,"result":[[], "abcd", 4]}\n')
+        q.push(b'{"id":2,"result":true}\n')
+        m.socket_factory = lambda *a, **k: q
+        m.start("DSuggest", "cpu", workers=1)
+        deadline = time.time() + 4
+        sent = b""
+        while time.time() < deadline:
+            sent = b"".join(q.sent)
+            if b"mining.suggest_difficulty" in sent:
+                break
+            time.sleep(0.05)
+        m.stop()
+        self.assertIn(b"mining.suggest_difficulty", sent)
+        self.assertEqual(m.suggest_difficulty, 8.0)  # cpu default
+
+    def test_suggest_difficulty_env_override_and_disable(self):
+        import os
+        m = DogeMiner()
+        os.environ["DOGE_SUGGEST_DIFF"] = "0"
+        try:
+            m.start("DSuggestOff", "cpu", workers=1)
+            self.assertEqual(m.suggest_difficulty, 0.0)
+            m.stop()
+        finally:
+            del os.environ["DOGE_SUGGEST_DIFF"]

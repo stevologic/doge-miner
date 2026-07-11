@@ -77,6 +77,8 @@ class StatsResponse(BaseModel):
     gpu_backend: str = "none"
     gpu_devices: list = []
     gpu_util_source: str = "none"
+    gpu_model: str = ""
+    expected_share_seconds: float = 0.0
     # Real Scrypt Effort datapoints (populated from miner when present)
     effort_percent: float = 0.0
     current_nonce: str = "0x00000000"
