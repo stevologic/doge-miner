@@ -726,7 +726,7 @@
         <p>CPU mode runs worker threads with <code>hashlib.scrypt</code> (the GIL is released, so threads scale across cores). GPU mode compiles an OpenCL scrypt kernel (NVIDIA/AMD/Intel, Windows/macOS/Linux). The kernel must pass a self-test against the CPU implementation before it's used, and every GPU share candidate is re-verified on the CPU before submission. If no usable GPU exists, it falls back to CPU threads and says so.</p>
 
         <p><strong>Pools & payouts</strong></p>
-        <p>The default pool (zpool) needs <strong>no registration</strong> — your wallet address is the login and payouts go straight to it (subject to the pool's minimum payout rules). Registered pools (AikaPool, litecoinpool, F2Pool) need a free account; use <em>account.worker</em> as the username. Realistic expectations: CPU/GPU scrypt hashrates are tiny compared to ASICs, so actual DOGE payouts will be very small and slow to reach pool minimums.</p>
+        <p>The default pool (zpool) needs <strong>no registration</strong> — your wallet address is the login and payouts go straight to it (subject to the pool's minimum payout rules). Registered pools (AikaPool, litecoinpool, F2Pool, ViaBTC, AntPool, PowerPool) need a free account; use <em>account.worker</em> as the username. Realistic expectations: CPU/GPU scrypt hashrates are tiny compared to ASICs, so actual DOGE payouts will be very small and slow to reach pool minimums.</p>
 
         <p><strong>Blockchain data</strong></p>
         <p>Block height, difficulty, network hashrate, price, recent blocks and address lookups come live from public explorers (Blockbook, Blockchair, BlockCypher, CoinGecko) — no API keys. The backend caches every response so your browser never hits provider rate limits.</p>

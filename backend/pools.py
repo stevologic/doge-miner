@@ -1,7 +1,7 @@
 """Popular Dogecoin mining pool presets.
 
 Every non-custom entry here was verified live (DNS + real stratum mining.subscribe
-handshake) on 2026-07-10. Zergpool was removed: it permanently shut down Sep 2025.
+handshake) on 2026-07-11. Zergpool was removed: it permanently shut down Sep 2025.
 
 Two kinds of pools:
   * registration_required=False — log in with just your DOGE wallet address as the
@@ -72,6 +72,54 @@ POOLS = [
         "notes": ("Large exchange-grade pool; merged LTC+DOGE. Registration required. "
                   "CAUTION: F2Pool's stratum accepts ANY username — a typo silently mines "
                   "into the void, so double-check your account name on their dashboard."),
+    },
+    {
+        "id": "viabtc",
+        "name": "ViaBTC (registered)",
+        "host": "ltc.viabtc.io",
+        "port": 3333,
+        "registration_required": True,
+        "username_hint": "ViaBTC account.workername",
+        "password_default": "x",
+        "password_hint": "Any password.",
+        "payout": "LTC + DOGE (merged mining, automatic separate DOGE payouts)",
+        "web": "https://www.viabtc.com",
+        "stats_url": "https://www.viabtc.com/ltc/miner",
+        "notes": ("One of the largest LTC+DOGE merged-mining pools (PPS+ or PPLNS). "
+                  "Mining LTC automatically earns DOGE too — no extra setup beyond "
+                  "adding a DOGE payout address. Failover port 443."),
+    },
+    {
+        "id": "antpool",
+        "name": "AntPool (registered)",
+        "host": "stratum-ltc.antpool.com",
+        "port": 8888,
+        "registration_required": True,
+        "username_hint": "AntPool subaccount.workersuffix (e.g. acct.01)",
+        "password_default": "x",
+        "password_hint": "Any password.",
+        "payout": "LTC + DOGE (merged mining; daily payouts, 0.001 LTC minimum)",
+        "web": "https://www.antpool.com",
+        "stats_url": "https://www.antpool.com/login",
+        "notes": ("Bitmain-run pool with LTC+DOGE merged mining. Alternate ports 443 "
+                  "and 25. Create a sub-account and set your payout wallet addresses "
+                  "in the dashboard first, or earnings sit in the account balance."),
+    },
+    {
+        "id": "powerpool",
+        "name": "PowerPool (registered)",
+        "host": "scrypt.stratum.powerpool.io",
+        "port": 3333,
+        "registration_required": True,
+        "username_hint": "PowerPool username.workername",
+        "password_default": "x",
+        "password_hint": "Any password. Optional: d=N sets a static starting difficulty.",
+        "payout": "Your pick of DOGE, LTC, BTC, USDC and more (hourly payouts)",
+        "web": "https://powerpool.io",
+        "stats_url": "https://powerpool.io/login",
+        "notes": ("Smaller profit-switching scrypt pool (1% fee, real-time PPS, hourly "
+                  "payouts with no minimum). Pays in whatever coin mix you choose — set "
+                  "DOGE in the dashboard payout settings. Registration required."),
     },
 ]
 

@@ -78,6 +78,9 @@ Live-verified too: real shares **accepted by zpool** during development (GPU, st
 | AikaPool | free account | `username.worker` | DOGE |
 | litecoinpool.org | free account | `username.worker` | LTC (merged-mines DOGE) |
 | F2Pool | free account | `account.worker` | LTC + DOGE ⚠️ *accepts any username — typos mine into the void* |
+| ViaBTC | free account | `account.worker` | LTC + DOGE (merged mining, automatic DOGE) |
+| AntPool | free account | `subaccount.worker` | LTC + DOGE (merged mining, daily payouts) |
+| PowerPool | free account | `username.worker` | your pick: DOGE, LTC, BTC, USDC… (hourly) |
 | Custom | — | anything | your pool's rules |
 
 💡 zpool honors password options like `c=DOGE` (payout coin) and `d=N` (static difficulty). Low static difficulty (e.g. `c=DOGE,d=64`) gets CPU/GPU miners frequent accepted shares.
