@@ -129,6 +129,9 @@
     .doge-btn:active { transform: scale(0.96); }
 
     #active-wallet:hover { text-decoration: underline dotted; text-underline-offset: 3px; }
+    /* one click selects the whole address (so Ctrl+C always works, even where
+       the clipboard API is unavailable, e.g. plain-http doge.local) */
+    .sel-all, #active-wallet { -webkit-user-select: all; user-select: all; }
 
     .fun-toast { animation: toast-pop 0.25s ease forwards; }
 
@@ -632,7 +635,7 @@
     <!-- DONATE (subtle, same as the project site) -->
     <div class="mt-3 pt-3 border-t border-dashed border-[#1f1f26] flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[11px] text-slate-500">
       <span>🐕 Free forever — but tokens aren't cheap. If this miner made you smile, a little Ð for the creator goes a long way:</span>
-      <code class="font-mono bg-[#0c0c0f] border border-[#1f1f26] rounded px-2 py-0.5 text-slate-400 break-all">DTW2M5oEW97WbmYJRM71qD7uE6xfJs1MUK</code>
+      <code id="donate-addr" class="sel-all font-mono bg-[#0c0c0f] border border-[#1f1f26] rounded px-2 py-0.5 text-slate-400 break-all">DTW2M5oEW97WbmYJRM71qD7uE6xfJs1MUK</code>
       <button onclick="copyDonate(this)" class="doge-btn px-2 py-0.5 border border-[#3f3f4a] rounded text-slate-500 hover:text-[#f0b90b] hover:border-[#f0b90b]">copy</button>
     </div>
   </div>
@@ -702,6 +705,9 @@
 
         <p><strong>Blockchain data</strong></p>
         <p>Block height, difficulty, network hashrate, price, recent blocks and address lookups come live from public explorers (Blockbook, Blockchair, BlockCypher, CoinGecko) — no API keys. The backend caches every response so your browser never hits provider rate limits.</p>
+
+        <p><strong>doge.local &amp; the “Not secure” label</strong></p>
+        <p>While running, the server announces <code>doge.local</code> over mDNS so any device on your network can open this dashboard by name. Browsers only treat <code>https://</code> and <code>localhost</code> as “secure contexts”, so on <code>doge.local</code> they show “Not secure” and hide the modern clipboard API — the app detects this and falls back automatically (copy buttons still work; worst case the address is auto-selected for Ctrl+C). Traffic never leaves your local network. Prefer <code>http://localhost:8000</code> on this machine if the label bothers you.</p>
 
         <p><strong>What's real (everything visible)</strong></p>
         <p>Hashrate, hashes, nonces, share counters, pool status, difficulty/target, best share, CPU/MEM (psutil), GPU utilization (nvidia-smi), wallet balance (on-chain), price (live). Nothing on this page is simulated.</p>
@@ -1428,17 +1434,59 @@
       var ef = document.getElementById('efficiency-stat'); if (ef) ef.textContent = (data.efficiency || 100).toFixed(1) + '%';
     }
 
+    // Copy that also works on non-secure contexts (http://doge.local): the async
+    // Clipboard API only exists on secure origins (https / localhost), so fall back
+    // to the legacy execCommand path, and finally to select-the-text + Ctrl+C.
+    function copyText(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(text).then(() => true).catch(() => copyTextLegacy(text));
+      }
+      return Promise.resolve(copyTextLegacy(text));
+    }
+
+    function copyTextLegacy(text) {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        const ok = document.execCommand('copy');
+        ta.remove();
+        return !!ok;
+      } catch (e) { return false; }
+    }
+
+    function selectNodeContents(el) {
+      try {
+        const r = document.createRange();
+        r.selectNodeContents(el);
+        const s = window.getSelection();
+        s.removeAllRanges();
+        s.addRange(r);
+      } catch (e) {}
+    }
+
     function copyDonate(btn) {
-      navigator.clipboard.writeText('DTW2M5oEW97WbmYJRM71qD7uE6xfJs1MUK').then(() => {
-        if (btn) { btn.textContent = 'copied ✓'; setTimeout(() => { btn.textContent = 'copy'; }, 1800); }
-        showToast('Much thanks!', 'Ð address copied — such generosity, wow', '#f0b90b');
-      }).catch(() => {});
+      copyText('DTW2M5oEW97WbmYJRM71qD7uE6xfJs1MUK').then(ok => {
+        if (ok) {
+          if (btn) { btn.textContent = 'copied ✓'; setTimeout(() => { btn.textContent = 'copy'; }, 1800); }
+          showToast('Much thanks!', 'Ð address copied — such generosity, wow', '#f0b90b');
+        } else {
+          const el = document.getElementById('donate-addr');
+          if (el) selectNodeContents(el);
+          showToast('Copy blocked by the browser', 'address selected — press Ctrl+C', '#f59e0b');
+        }
+      });
     }
 
     function copyNerdStats() {
       const ids = ['block-height','net-difficulty','target-hex','last-hash','nonces-searched','threads','mem-used','cpu-load','gpu-load','mine-backend'];
       const parts = ids.map(id => { const el = document.getElementById(id); return id + '=' + (el ? el.textContent : '?'); });
-      try { navigator.clipboard.writeText(parts.join(' | ')); showToast('Copied', 'nerd stats in clipboard'); } catch(e) {}
+      copyText(parts.join(' | ')).then(ok => showToast(ok ? 'Copied' : 'Copy blocked', ok ? 'nerd stats in clipboard' : 'select the text manually'));
     }
 
     // =============== BLOCKCHAIN EXPLORER ===============
@@ -1732,9 +1780,10 @@
         const aw = e.target.closest('#active-wallet');
         const addr = aw ? aw.textContent.trim() : '';
         if (!addr) return;
-        navigator.clipboard.writeText(addr).then(() => {
-          showToast('Copied', addr.slice(0, 10) + '… in clipboard', '#f0b90b');
-        }).catch(() => {});
+        copyText(addr).then(ok => {
+          if (ok) showToast('Copied', addr.slice(0, 10) + '… in clipboard', '#f0b90b');
+          else { selectNodeContents(aw); showToast('Copy blocked by the browser', 'address selected — press Ctrl+C', '#f59e0b'); }
+        });
       });
 
       document.getElementById("wallet-input").addEventListener("keyup", function(ev) {
