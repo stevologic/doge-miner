@@ -458,13 +458,14 @@
             <div id="effort-text" class="font-mono text-[#f0b90b]">SEARCHING</div>
           </div>
 
-          <div class="flex-1 flex flex-col justify-center px-2">
-            <div class="h-5 bg-[#1a1a20] rounded-full overflow-hidden border border-[#2a2a33]">
-              <div id="effort-bar" class="h-5 bg-gradient-to-r from-[#f0b90b] to-[#ff9f1c] share-bar" style="width: 0%"></div>
+          <div class="flex-1 flex items-center justify-between px-2 gap-2">
+            <div>
+              <div class="nerd-label">CURRENT NONCE</div>
+              <div id="current-nonce" class="font-mono text-lg">0x00000000</div>
             </div>
-            <div class="mt-1 text-[10px] flex justify-between text-slate-400 font-mono">
-              <div>NONCE <span id="current-nonce">0x00000000</span></div>
-              <div id="effort-percent">0%</div>
+            <div class="text-right">
+              <div class="nerd-label">EFFORT</div>
+              <div id="effort-percent" class="font-mono text-lg text-[#f0b90b]">0%</div>
             </div>
           </div>
 
@@ -630,6 +631,15 @@
       <div class="text-[10px] text-slate-500 flex items-center gap-x-2">
         <span>REAL POOL MINING RUNS IN THE PYTHON BACKEND. Educational project — CPU/GPU hashrates are far below ASICs; payouts come from your chosen pool, not this app.</span>
       </div>
+    </div>
+
+    <!-- PROJECT LINKS -->
+    <div class="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] text-slate-500">
+      <a href="https://github.com/stevologic/doge-miner" target="_blank" rel="noopener" class="underline hover:text-[#f0b90b]">Source on GitHub</a>
+      <span class="text-[#f0b90b]/40">·</span>
+      <a href="https://github.com/stevologic/doge-miner/issues/new?labels=bug&title=%5Bbug%5D%20" target="_blank" rel="noopener" class="underline hover:text-[#f0b90b]">🐛 Report a bug</a>
+      <span class="text-[#f0b90b]/40">·</span>
+      <a href="https://github.com/stevologic/doge-miner/issues/new?labels=enhancement&title=%5Bfeature%5D%20" target="_blank" rel="noopener" class="underline hover:text-[#f0b90b]">💡 Request a feature</a>
     </div>
 
     <!-- DONATE (subtle, same as the project site) -->
@@ -1428,7 +1438,6 @@
       var ep = document.getElementById('effort-percent'); if (ep) ep.textContent = (data.effort_percent || 0).toFixed(1) + '%';
       var en = document.getElementById('current-nonce'); if (en) en.textContent = data.current_nonce || '0x00000000';
       var et = document.getElementById('effort-text'); if (et) et.textContent = data.effort_text || 'SEARCHING';
-      var eb = document.getElementById('effort-bar'); if (eb) eb.style.width = (data.effort_percent || 0) + '%';
       var lk = document.getElementById('luck-stat'); if (lk) lk.textContent = (data.luck || 100).toFixed(1) + '%';
       var sk = document.getElementById('streak-stat'); if (sk) sk.textContent = (data.streak || 0);
       var ef = document.getElementById('efficiency-stat'); if (ef) ef.textContent = (data.efficiency || 100).toFixed(1) + '%';
