@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DOGE MINER — free, open-source Dogecoin pool miner (CPU + GPU)</title>
+<meta name="description" content="A free (MIT) full-stack Dogecoin pool miner: real Scrypt on CPU threads or OpenCL GPU, no-registration pools, live blockchain telemetry, one-click start on Windows, macOS and Linux.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='55' r='40' fill='%23f0b90b'/%3E%3Ctext x='50' y='72' font-size='52' text-anchor='middle' fill='%230a0a0f' font-family='monospace' font-weight='bold'%3E%C3%90%3C/text%3E%3C/svg%3E">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+  :root {
+    --bg: #0a0a0f; --panel: #111114; --panel2: #0c0c0f; --line: #2a2a33; --line2: #1f1f26;
+    --gold: #f0b90b; --orange: #ff9f1c; --text: #e2e8f0; --muted: #94a3b8; --dim: #64748b;
+    --green: #34d399; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; line-height: 1.6; }
+  .retro { font-family: "Press Start 2P", var(--mono); letter-spacing: 1px; }
+  a { color: var(--gold); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+  /* top bar */
+  .topbar { border-bottom: 1px solid var(--line2); background: #0f0f13; position: sticky; top: 0; z-index: 50; }
+  .topbar .wrap { display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; gap: 12px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand .d { width: 36px; height: 36px; background: var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--bg); font-size: 26px; font-weight: 800; }
+  .brand .retro { font-size: 15px; }
+  .brand .retro b { color: var(--gold); }
+  nav a { color: var(--muted); font-size: 13px; margin-left: 18px; white-space: nowrap; }
+  nav a:hover { color: var(--gold); text-decoration: none; }
+  nav a.gh { color: var(--bg); background: var(--gold); padding: 6px 14px; border-radius: 8px; font-weight: 700; }
+
+  /* hero */
+  .hero { padding: 72px 0 40px; text-align: center; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; inset: 0; background:
+    linear-gradient(rgba(240,185,11,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(240,185,11,0.04) 1px, transparent 1px);
+    background-size: 26px 26px; pointer-events: none; }
+  .hero h1 { font-size: clamp(34px, 7vw, 64px); font-weight: 900; letter-spacing: -2px; }
+  .hero h1 .gold { color: var(--gold); }
+  .hero .shiba { vertical-align: middle; margin-left: 8px; }
+  .hero p.tag { color: var(--muted); font-size: clamp(16px, 2.4vw, 21px); max-width: 720px; margin: 14px auto 0; }
+  .badges { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 22px; }
+  .badge { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 6px 14px; font-size: 13px; color: var(--muted); font-family: var(--mono); }
+  .badge b { color: var(--green); }
+  .badge.mit b { color: var(--gold); }
+  .cta { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 30px; }
+  .btn { display: inline-block; padding: 14px 28px; border-radius: 14px; font-weight: 800; font-size: 16px; }
+  .btn.primary { background: var(--gold); color: var(--bg); box-shadow: 0 0 34px rgba(240,185,11,.25); }
+  .btn.primary:hover { background: var(--orange); text-decoration: none; }
+  .btn.ghost { border: 1px solid var(--line); color: var(--text); background: var(--panel); }
+  .btn.ghost:hover { border-color: var(--gold); text-decoration: none; }
+  .hero .fine { color: var(--dim); font-size: 12px; margin-top: 16px; font-family: var(--mono); }
+
+  /* sections */
+  section { padding: 56px 0; border-top: 1px solid var(--line2); }
+  h2 { font-size: 26px; margin-bottom: 6px; }
+  h2 .retro { font-size: 18px; color: var(--gold); }
+  .sub { color: var(--dim); font-size: 14px; margin-bottom: 28px; }
+
+  /* one-click strip */
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; }
+  .step { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
+  .step .n { color: var(--gold); font-family: var(--mono); font-size: 12px; letter-spacing: 2px; }
+  .step h3 { font-size: 16px; margin: 6px 0; }
+  .step code, .codebox { display: block; background: var(--panel2); border: 1px solid var(--line2); border-radius: 10px; padding: 10px 12px; font-family: var(--mono); font-size: 13px; color: var(--green); margin-top: 8px; overflow-x: auto; white-space: pre; }
+  .step p { color: var(--muted); font-size: 13px; margin-top: 6px; }
+
+  /* screenshots */
+  .shots { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .shot { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  .shot.wide { grid-column: 1 / -1; }
+  .shot img { width: 100%; display: block; }
+  .shot figcaption { padding: 10px 16px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line2); }
+  .shot figcaption b { color: var(--text); }
+  @media (max-width: 760px) { .shots { grid-template-columns: 1fr; } }
+
+  /* features grid */
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
+  .card h3 { font-size: 15px; margin-bottom: 6px; }
+  .card h3 .e { margin-right: 8px; }
+  .card p { color: var(--muted); font-size: 13.5px; }
+  .card code { font-family: var(--mono); color: var(--gold); font-size: 12.5px; }
+
+  /* pipeline */
+  .pipe { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-family: var(--mono); font-size: 12.5px; margin: 18px 0 26px; }
+  .pipe .box { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; color: var(--text); }
+  .pipe .box small { display: block; color: var(--dim); font-size: 10.5px; }
+  .pipe .arr { color: var(--gold); font-weight: 700; }
+
+  /* tables */
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line2); }
+  th { color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+  td b { color: var(--gold); }
+  .tick { color: var(--green); }
+  .tablebox { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 8px 10px; overflow-x: auto; }
+
+  /* faq */
+  details { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; margin-bottom: 10px; }
+  summary { cursor: pointer; font-weight: 700; font-size: 15px; }
+  details p { color: var(--muted); font-size: 14px; margin-top: 10px; }
+
+  /* footer */
+  footer { border-top: 1px solid var(--line2); padding: 34px 0 44px; color: var(--dim); font-size: 13px; }
+  footer .row { display: flex; justify-content: space-between; gap: 18px; flex-wrap: wrap; align-items: center; }
+  .donate { margin-top: 18px; padding-top: 14px; border-top: 1px dashed var(--line2); font-size: 12px; color: var(--dim); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .donate code { font-family: var(--mono); background: var(--panel2); border: 1px solid var(--line2); padding: 3px 8px; border-radius: 6px; color: var(--muted); font-size: 11.5px; word-break: break-all; }
+  .donate button { background: none; border: 1px solid var(--line); color: var(--dim); border-radius: 6px; padding: 3px 8px; font-size: 11px; cursor: pointer; }
+  .donate button:hover { color: var(--gold); border-color: var(--gold); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="wrap">
+    <div class="brand">
+      <div class="d">Ð</div>
+      <span class="retro"><b>DOGE</b>MINER</span>
+    </div>
+    <nav>
+      <a href="#start">Quick start</a>
+      <a href="#shots">Screenshots</a>
+      <a href="#newbies">New to mining?</a>
+      <a href="#tech">How it works</a>
+      <a href="#pools">Pools</a>
+      <a class="gh" href="https://github.com/stevologic/doge-miner">GitHub ↗</a>
+    </nav>
+  </div>
+</div>
+
+<header class="hero">
+  <div class="wrap">
+    <h1>MUCH<span class="gold">WOW</span>.
+      <svg class="shiba" width="0.95em" height="0.95em" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="15,36 25,5 45,25" fill="#d98324"/><polygon points="85,36 75,5 55,25" fill="#d98324"/>
+        <polygon points="21,30 27,13 38,23" fill="#b96a55"/><polygon points="79,30 73,13 62,23" fill="#b96a55"/>
+        <ellipse cx="50" cy="58" rx="35" ry="31" fill="#eda64f"/>
+        <ellipse cx="27" cy="68" rx="13" ry="12" fill="#fdf4e3"/><ellipse cx="73" cy="68" rx="13" ry="12" fill="#fdf4e3"/>
+        <ellipse cx="50" cy="72" rx="20" ry="15" fill="#fdf4e3"/>
+        <ellipse cx="35" cy="44" rx="4.5" ry="3" fill="#fdf4e3"/><ellipse cx="65" cy="44" rx="4.5" ry="3" fill="#fdf4e3"/>
+        <ellipse cx="35" cy="53" rx="3.4" ry="4.4" fill="#3b2b1d"/><ellipse cx="65" cy="53" rx="3.4" ry="4.4" fill="#3b2b1d"/>
+        <circle cx="36.2" cy="51.4" r="1.2" fill="#fff"/><circle cx="66.2" cy="51.4" r="1.2" fill="#fff"/>
+        <ellipse cx="50" cy="65" rx="4.6" ry="3.4" fill="#33251a"/>
+        <path d="M50 68 L50 73" stroke="#33251a" stroke-width="2" stroke-linecap="round"/>
+        <path d="M42 74 Q46 79 50 74 Q54 79 58 74" stroke="#33251a" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+      </svg>
+      <br>REAL DOGECOIN MINING.</h1>
+    <p class="tag">A full-stack, open-source Dogecoin pool miner with a live dashboard.
+       Real Scrypt proof-of-work on your CPU or GPU, pools that need <b>no registration</b>,
+       and blockchain telemetry with <b>no API keys</b>.</p>
+    <div class="badges">
+      <span class="badge mit"><b>MIT licensed</b> — free forever</span>
+      <span class="badge"><b>✓</b> one-click start</span>
+      <span class="badge"><b>✓</b> Windows · macOS · Linux</span>
+      <span class="badge"><b>✓</b> CPU + OpenCL GPU</span>
+      <span class="badge"><b>✓</b> no signup, no keys</span>
+    </div>
+    <div class="cta">
+      <a class="btn primary" href="https://github.com/stevologic/doge-miner">⛏️ Get it free on GitHub</a>
+      <a class="btn ghost" href="#start">One-click quick start ↓</a>
+    </div>
+    <div class="fine">100% open source · you only ever enter a PUBLIC wallet address · no private keys, ever</div>
+  </div>
+</header>
+
+<section id="start">
+  <div class="wrap">
+    <h2><span class="retro">01</span> &nbsp;One click. Really.</h2>
+    <p class="sub">Clone or download the repo, then start it the way your OS likes. The app opens at <code>localhost:8000</code> — enter your Dogecoin address, press START MINING, done.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="n">WINDOWS</div>
+        <h3>Double-click <code>start.bat</code></h3>
+        <p>That's the click. It creates a virtualenv, installs dependencies (GPU extras included when possible) and launches the server.</p>
+      </div>
+      <div class="step">
+        <div class="n">MACOS / LINUX</div>
+        <h3>One command</h3>
+        <code>./start.sh</code>
+        <p>Same deal: venv, dependencies, server. Python 3.10+ is all you need.</p>
+      </div>
+      <div class="step">
+        <div class="n">DOCKER</div>
+        <h3>Container fans</h3>
+        <code>docker compose up --build</code>
+        <p>Single container, health-checked, env-configurable pool.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="shots">
+  <div class="wrap">
+    <h2><span class="retro">02</span> &nbsp;Screenshots — from a real session</h2>
+    <p class="sub">These are unedited captures of the app mining on a live pool (zpool) with an RTX 3080 Ti — real accepted shares, real blockchain data. Click any image for full size.</p>
+    <div class="shots">
+      <figure class="shot wide">
+        <a href="img/dashboard.png"><img src="img/dashboard.png" alt="DOGE MINER dashboard mining live: 243 KH/s on GPU, 7 shares accepted, live charts" loading="lazy"></a>
+        <figcaption><b>The dashboard, mid-session.</b> 243 KH/s of real Scrypt on an OpenCL GPU, 7 shares accepted by the pool (0 rejected), rolling hashrate chart, live CPU/GPU utilization, on-chain wallet balance.</figcaption>
+      </figure>
+      <figure class="shot">
+        <a href="img/landing.png"><img src="img/landing.png" alt="Setup screen: enter a Dogecoin address, pick a pool, press START MINING" loading="lazy"></a>
+        <figcaption><b>Setup takes one field.</b> Your public DOGE address (checksum-verified) — pick a pool, press START. The default pool needs no account.</figcaption>
+      </figure>
+      <figure class="shot">
+        <a href="img/telemetry.png"><img src="img/telemetry.png" alt="Nerd mode and live feed: share target, last scrypt hash, per-worker sweeps" loading="lazy"></a>
+        <figcaption><b>Nerd mode + live feed.</b> Share target, last PoW hash, nonces searched — plus a feed of the miner's actual work, down to per-worker nonce sweeps in verbose mode.</figcaption>
+      </figure>
+      <figure class="shot wide">
+        <a href="img/explorer.png"><img src="img/explorer.png" alt="Built-in Dogecoin blockchain explorer: height, difficulty, network hashrate, recent blocks, address lookup" loading="lazy"></a>
+        <figcaption><b>Built-in blockchain explorer.</b> Live height, difficulty, network hashrate, price, mempool, recent blocks and address lookups — no API keys, cached server-side so you never hit rate limits.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section id="newbies">
+  <div class="wrap">
+    <h2><span class="retro">03</span> &nbsp;Never mined before? Start here</h2>
+    <p class="sub">Plain-English answers, no jargon, no hype.</p>
+    <div class="grid">
+      <div class="card"><h3><span class="e">🤔</span>What even is mining?</h3>
+        <p>Your computer repeatedly hashes small "job" puzzles from the Dogecoin network. Finding a good enough hash is called a <i>share</i> — proof you did real work. Pools combine everyone's shares and split the block rewards proportionally.</p></div>
+      <div class="card"><h3><span class="e">🎒</span>What do I need?</h3>
+        <p>Exactly one thing: a Dogecoin <b>wallet address</b> (free from any reputable wallet app). You paste the <i>public</i> address — the one you can safely share with anyone. This app never asks for private keys, passwords, or an email.</p></div>
+      <div class="card"><h3><span class="e">🏊</span>Why a pool? Which one?</h3>
+        <p>Solo-finding a Dogecoin block with a home computer is a lottery you won't win. Pools make earnings steady. The default pool here (zpool) needs <b>zero registration</b> — your wallet address is your login and payouts go straight to it.</p></div>
+      <div class="card"><h3><span class="e">💰</span>Will I get rich?</h3>
+        <p>No — and this page won't pretend otherwise. CPUs and GPUs earn tiny fractions of a DOGE compared to ASIC farms. This is for <b>learning how mining really works</b>, with real shares accepted by real pools. Treat any payout as a souvenir.</p></div>
+      <div class="card"><h3><span class="e">🔒</span>Is it safe?</h3>
+        <p>The code is fully open source (read every line on GitHub). It runs locally on your machine, sends only standard mining messages to the pool you choose, and touches nothing but a public address. MIT licensed — free, forever, no strings.</p></div>
+      <div class="card"><h3><span class="e">⚡</span>CPU or GPU?</h3>
+        <p>Try CPU first (works everywhere). If you have a gaming GPU, flip the toggle: the OpenCL engine is typically <b>50–100× faster</b>. On a laptop RTX 3080 Ti: ~4 KH/s CPU vs ~270 KH/s GPU.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="tech">
+  <div class="wrap">
+    <h2><span class="retro">04</span> &nbsp;How it actually works</h2>
+    <p class="sub">For the people who scroll straight to this section. Everything below is implemented in readable Python (~1 file per concern) and covered by 60+ unit tests.</p>
+
+    <div class="pipe">
+      <span class="box">Stratum TCP<small>subscribe · authorize</small></span><span class="arr">→</span>
+      <span class="box">mining.notify<small>job: coinb1/2, merkle branch</small></span><span class="arr">→</span>
+      <span class="box">coinbase + extranonce<small>sha256d merkle root</small></span><span class="arr">→</span>
+      <span class="box">80-byte header<small>version · prevhash · merkle · ntime · nbits · nonce</small></span><span class="arr">→</span>
+      <span class="box">scrypt(N=1024, r=1, p=1)<small>CPU threads or OpenCL kernel</small></span><span class="arr">→</span>
+      <span class="box">LE compare vs target<small>diff-1 = 0xffff·2²²⁴</small></span><span class="arr">→</span>
+      <span class="box">mining.submit<small>pool accepts → you get credit</small></span>
+    </div>
+
+    <div class="grid">
+      <div class="card"><h3><span class="e">🧮</span>Proven against the real chain</h3>
+        <p>Header serialization, the stratum per-word prevhash swap, little-endian PoW comparison and target math are pinned by unit tests against the <b>Dogecoin genesis block</b> and block 1 — the rebuilt genesis header byte-for-byte matches the chain, and its scrypt hash passes the genesis target.</p></div>
+      <div class="card"><h3><span class="e">🎮</span>A real GPU kernel, honestly gated</h3>
+        <p>The OpenCL kernel implements full scrypt — PBKDF2-HMAC-SHA256 → ROMix (1024× Salsa20/8 over a 128&nbsp;KB scratchpad) → PBKDF2. It <b>refuses to run</b> unless it matches Python's <code>hashlib.scrypt</code> on random headers, and every share candidate is re-verified on the CPU before submission. No GPU? Clean, clearly-labeled CPU fallback.</p></div>
+      <div class="card"><h3><span class="e">🧵</span>CPU threads that actually scale</h3>
+        <p><code>hashlib.scrypt</code> releases the GIL, so worker threads scale across cores (~3.8× on 4 threads). Header prefixes are cached per job, so each hash only packs a nonce and runs scrypt.</p></div>
+      <div class="card"><h3><span class="e">📡</span>Robust Stratum client</h3>
+        <p>Auto-reconnect watchdog, <code>set_extranonce</code> and <code>client.get_version</code> handling, and a grace-period alarm for pools that <i>silently ignore</i> a bad username (looking at you, litecoinpool). Share counters come exclusively from real pool responses.</p></div>
+      <div class="card"><h3><span class="e">⛓️</span>Key-free chain telemetry</h3>
+        <p>Height, difficulty, network hashrate, price, blocks, address & tx lookups from public providers (Blockbook → Blockchair → BlockCypher, CoinGecko for price) with server-side caching, automatic failover and labeled stale-serving. You never touch an API key or a rate limit.</p></div>
+      <div class="card"><h3><span class="e">📊</span>Telemetry with no fiction</h3>
+        <p>Rolling hashrate, shares submitted/accepted/rejected, pool difficulty + exact share target, last PoW hash, best-share difficulty, statistical luck, CPU/MEM via psutil, GPU via nvidia-smi or OpenCL duty cycle, on-chain balance. <b>Nothing on screen is simulated.</b></p></div>
+    </div>
+
+    <p style="margin-top:22px; color:var(--muted); font-size:14px">Stack: Python 3.10+ · FastAPI · stdlib <code style="font-family:var(--mono); color:var(--gold)">hashlib.scrypt</code> · PyOpenCL (optional) · a single-file frontend with a locally compiled Tailwind v4 stylesheet (no CDNs). Full details in the <a href="https://github.com/stevologic/doge-miner#readme">README</a>.</p>
+  </div>
+</section>
+
+<section id="pools">
+  <div class="wrap">
+    <h2><span class="retro">05</span> &nbsp;Pools that work out of the box</h2>
+    <p class="sub">Every preset was verified with a live stratum handshake. Or point it at any pool with the custom option.</p>
+    <div class="tablebox">
+      <table>
+        <tr><th>Pool</th><th>Registration</th><th>Login</th><th>Payout</th></tr>
+        <tr><td><b>zpool.ca</b> (default)</td><td class="tick">none — just mine</td><td>your DOGE wallet address</td><td>DOGE direct to wallet</td></tr>
+        <tr><td>AikaPool</td><td>free account</td><td>username.worker</td><td>DOGE</td></tr>
+        <tr><td>litecoinpool.org</td><td>free account</td><td>username.worker</td><td>LTC (merged-mines DOGE)</td></tr>
+        <tr><td>F2Pool</td><td>free account</td><td>account.worker</td><td>LTC + DOGE (merged)</td></tr>
+        <tr><td>Custom</td><td>—</td><td>anything</td><td>your pool's rules</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2><span class="retro">06</span> &nbsp;Fair questions</h2>
+    <details><summary>Is it really free?</summary>
+      <p>Yes. MIT license — use it, fork it, learn from it, ship it in your own project. No trials, no telemetry-to-us, no "pro" tier. The mining pool you choose takes its own small fee (typically 0.5–1%), which goes to the pool, not to this project.</p></details>
+    <details><summary>Why do my shares matter if I'll never find a block?</summary>
+      <p>Pools pay for <i>shares</i>, not blocks. Every accepted share is proof of work at the pool's difficulty, and the pool splits its block rewards across all shares. Small hashrate = small (but real) slice.</p></details>
+    <details><summary>How do I know it's actually mining and not faking it?</summary>
+      <p>Three ways: (1) the live feed shows the raw stratum wire traffic and per-worker nonce sweeps in verbose mode, (2) your pool's own stats page (linked in the header) shows shares credited to your address by the pool itself, (3) the PoW math is unit-tested against the Dogecoin genesis block — run the tests yourself.</p></details>
+    <details><summary>What about my electricity bill?</summary>
+      <p>A mining GPU draws serious power. For learning, run it for minutes, not months — the dashboard is just as instructive either way. This is an educational tool, not an investment.</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="row">
+      <div>
+        <span class="retro" style="font-size:12px"><b style="color:var(--gold)">DOGE</b>MINER</span>
+        &nbsp;·&nbsp; <a href="https://github.com/stevologic/doge-miner/blob/main/LICENSE">MIT License</a>
+        &nbsp;·&nbsp; <a href="https://github.com/stevologic/doge-miner">Source on GitHub</a>
+      </div>
+      <div>Educational project. Not financial advice. Payouts come from your chosen pool, never from this app.</div>
+    </div>
+    <div class="donate">
+      <span>🐕 Free forever — but tokens aren't cheap. If this project made you smile, a little Ð for the creator goes a long way:</span>
+      <code id="donate-addr">DTW2M5oEW97WbmYJRM71qD7uE6xfJs1MUK</code>
+      <button onclick="navigator.clipboard.writeText('DTW2M5oEW97WbmYJRM71qD7uE6xfJs1MUK').then(()=>{this.textContent='copied ✓';setTimeout(()=>this.textContent='copy',1600)})">copy</button>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
