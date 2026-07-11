@@ -1495,11 +1495,10 @@
       const tip = document.createElement('div');
       tip.id = 'info-tip';
       document.body.appendChild(tip);
-      const show = (el) => {
-        tip.innerHTML = el.dataset.info || '';
-        tip.style.display = 'block';
-        tip.style.left = '0px'; tip.style.top = '0px';
-        const r = el.getBoundingClientRect();
+      let anchor = null; // the .info icon the tip is currently attached to
+      const place = () => {
+        if (!anchor) return;
+        const r = anchor.getBoundingClientRect();
         const tw = tip.offsetWidth, th = tip.offsetHeight;
         let x = Math.min(Math.max(8, r.left + r.width / 2 - tw / 2), window.innerWidth - tw - 8);
         let y = r.top - th - 8;
@@ -1507,7 +1506,14 @@
         tip.style.left = x + 'px';
         tip.style.top = y + 'px';
       };
-      const hide = () => { tip.style.display = 'none'; _tipPinned = null; };
+      const show = (el) => {
+        anchor = el;
+        tip.innerHTML = el.dataset.info || '';
+        tip.style.display = 'block';
+        tip.style.left = '0px'; tip.style.top = '0px';
+        place();
+      };
+      const hide = () => { tip.style.display = 'none'; anchor = null; _tipPinned = null; };
       document.addEventListener('mouseover', (e) => {
         const i = e.target.closest('.info');
         if (i && !_tipPinned) show(i);
@@ -1521,8 +1527,18 @@
         else if (_tipPinned) hide();
       });
       document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hide(); });
-      window.addEventListener('scroll', hide, true);
-      window.addEventListener('resize', hide);
+      // Follow the icon instead of vanishing: the activity feed auto-scrolls on
+      // every refresh, and a blanket hide-on-scroll killed open tooltips mid-read.
+      window.addEventListener('scroll', (e) => {
+        if (!anchor) return;
+        const t = e.target;
+        // scrolls inside containers that don't hold the icon can't move it
+        if (t !== document && t instanceof Element && !t.contains(anchor)) return;
+        const r = anchor.getBoundingClientRect();
+        if (!document.contains(anchor) || r.bottom < 0 || r.top > window.innerHeight) { hide(); return; }
+        place();
+      }, true);
+      window.addEventListener('resize', place);
     }
 
     function copyText(text) {
