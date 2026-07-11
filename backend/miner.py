@@ -316,6 +316,21 @@ def detect_gpu_model() -> str:
     return name
 
 
+def server_identity() -> Dict[str, str]:
+    """Hostname + LAN IP of the machine running this backend. Surfaced in the UI so
+    two machines both announcing doge.local can't be mistaken for one another."""
+    try:
+        hostname = socket.gethostname()
+    except OSError:
+        hostname = ""
+    try:
+        from .localdns import get_lan_ip  # same IP that mDNS announces
+        ip = get_lan_ip()
+    except Exception:
+        ip = ""
+    return {"server_hostname": hostname, "server_ip": ip}
+
+
 def _warm_gpu_model_cache():
     threading.Thread(target=detect_gpu_model, daemon=True).start()
 
@@ -1290,6 +1305,7 @@ class DogeMiner:
                 "gpu_devices": list(self.gpu_device_names),
                 "gpu_util_source": self.gpu_util_source,
                 "gpu_model": detect_gpu_model(),
+                **server_identity(),
                 "expected_share_seconds": round(expected_seconds_per_share(self.difficulty, self.current_hashrate), 1),
                 # Real datapoints for SCRYPT EFFORT div (no illustrative values)
                 "effort_percent": effort_percent,

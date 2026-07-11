@@ -173,6 +173,11 @@
 
     .scrypt-visual { font-size: 10px; letter-spacing: 2px; }
 
+    /* which machine this dashboard is talking to (several can announce doge.local);
+       plain CSS because the compiled tailwind sheet lacks sm:flex */
+    .server-chip { display: none; }
+    @media (min-width: 640px) { .server-chip { display: flex; } }
+
     .chain-chip {
       background: #0c0c0f;
       border: 1px solid #1f1f26;
@@ -217,6 +222,7 @@
           <span class="text-emerald-400 text-[10px] tracking-widest">v2.0</span>
         </div>
         <div class="hidden md:block text-[10px] px-2 py-px rounded bg-[#1f1f26] text-[#f0b90b]/70 whitespace-nowrap">FULL-STACK • REAL POOL MINER • CPU + OPENCL GPU</div>
+        <div class="server-chip items-center text-[10px] px-2 py-px rounded bg-[#1f1f26] font-mono text-slate-400 whitespace-nowrap">🖥 <span id="server-host-text" class="ml-1">—</span><span class="info" data-info="The computer whose backend this page is talking to (hostname @ LAN IP). Several machines on one network can all announce doge.local — this shows which one actually answered. Open http://localhost:8000 on a machine to always get its own.">i</span></div>
       </div>
       <div class="flex items-center gap-x-4 text-xs">
         <div class="flex items-center gap-x-2 text-[#f0b90b]">
@@ -581,6 +587,7 @@
               <div><span class="text-slate-500">CPU</span> <span id="cpu-load" class="font-mono">0%</span></div>
               <div><span class="text-slate-500">GPU</span> <span id="gpu-load" class="font-mono">0%</span></div>
               <div><span class="text-slate-500">BACKEND</span> <span id="mine-backend" class="font-mono">—</span></div>
+              <div><span class="text-slate-500">SERVER<span class="info" data-info="Hostname @ LAN IP of the machine actually doing the mining. Useful when more than one computer on the network runs the miner (they all answer to doge.local).">i</span></span> <span id="server-host" class="font-mono">—</span></div>
             </div>
           </div>
         </div>
@@ -1298,23 +1305,33 @@
     }
 
     // =============== STATS POLLING ===============
-    // Name the actual detected card wherever the UI says just "GPU". The model comes
-    // from /api/stats (backend detects via nvidia-smi -> OpenCL -> OS query), so this
-    // works at page load too — not only while mining.
-    function applyDetectedGpu(s) {
+    // Name the machine and hardware this page is actually talking to. The GPU model,
+    // hostname and LAN IP come from /api/stats (backend detects them), so this works
+    // at page load too — not only while mining. Matters when several computers on the
+    // network run the miner: they all answer to doge.local.
+    function applyServerIdentity(s) {
       const model = ((s.gpu_backend === 'opencl' && (s.gpu_devices || [])[0]) || s.gpu_model || '').trim();
-      if (!model) return;
-      for (const id of ['setup-mode-gpu', 'mode-gpu-btn']) {
-        const b = document.getElementById(id);
-        if (b) b.title = 'Mine on ' + model + ' (OpenCL)';
+      if (model) {
+        for (const id of ['setup-mode-gpu', 'mode-gpu-btn']) {
+          const b = document.getElementById(id);
+          if (b) b.title = 'Mine on ' + model + ' (OpenCL)';
+        }
+        const cap = document.getElementById('gpu-capability-note');
+        if (cap) cap.textContent = 'CPU threads + OpenCL on ' + model + ' (self-tested)';
+        const icon = document.getElementById('gpu-util-info');
+        if (icon) icon.dataset.info = 'Real load of your ' + model + ': nvidia-smi when available, otherwise the measured OpenCL kernel duty cycle (works on AMD/Intel too).';
+        // while mining the poll handler owns this note ("mining on … — util via …")
+        const note = document.getElementById('gpu-panel-note');
+        if (note && !s.running) note.textContent = model + ' — util via nvidia-smi / duty cycle';
       }
-      const cap = document.getElementById('gpu-capability-note');
-      if (cap) cap.textContent = 'CPU threads + OpenCL on ' + model + ' (self-tested)';
-      const icon = document.getElementById('gpu-util-info');
-      if (icon) icon.dataset.info = 'Real load of your ' + model + ': nvidia-smi when available, otherwise the measured OpenCL kernel duty cycle (works on AMD/Intel too).';
-      // while mining the poll handler owns this note ("mining on … — util via …")
-      const note = document.getElementById('gpu-panel-note');
-      if (note && !s.running) note.textContent = model + ' — util via nvidia-smi / duty cycle';
+      const host = (s.server_hostname || '').trim(), ip = (s.server_ip || '').trim();
+      if (host || ip) {
+        const label = host && ip ? host + ' @ ' + ip : (host || ip);
+        const chip = document.getElementById('server-host-text');
+        if (chip) chip.textContent = label;
+        const nerd = document.getElementById('server-host');
+        if (nerd) nerd.textContent = label;
+      }
     }
 
     async function fetchAndUpdateStats() {
@@ -1419,7 +1436,7 @@
           else if (data.mode === 'gpu') mb.textContent = 'GPU mode (CPU fallback)';
           else mb.textContent = 'CPU threads (hashlib.scrypt)';
         }
-        applyDetectedGpu(data);
+        applyServerIdentity(data);
         const gpuNote = document.getElementById('gpu-panel-note');
         if (gpuNote) {
           const src = data.gpu_util_source === 'opencl-duty' ? 'kernel duty cycle'
@@ -1608,7 +1625,7 @@
     }
 
     function copyNerdStats() {
-      const ids = ['block-height','net-difficulty','target-hex','last-hash','nonces-searched','threads','mem-used','cpu-load','gpu-load','mine-backend'];
+      const ids = ['block-height','net-difficulty','target-hex','last-hash','nonces-searched','threads','mem-used','cpu-load','gpu-load','mine-backend','server-host'];
       const parts = ids.map(id => { const el = document.getElementById(id); return id + '=' + (el ? el.textContent : '?'); });
       copyText(parts.join(' | ')).then(ok => showToast(ok ? 'Copied' : 'Copy blocked', ok ? 'nerd stats in clipboard' : 'select the text manually'));
     }
@@ -1868,7 +1885,7 @@
         const res = await fetch(`${BACKEND_URL}/api/stats`);
         if (!res.ok) return;
         const s = await res.json();
-        applyDetectedGpu(s); // label the real card even before mining starts
+        applyServerIdentity(s); // label the real card + host even before mining starts
         if (s.running) {
           state.running = true;
           backendMode = s.mode || 'cpu';

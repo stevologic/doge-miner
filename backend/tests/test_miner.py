@@ -706,6 +706,18 @@ class TestGpuModelAndSuggestDiff(unittest.TestCase):
         m = DogeMiner()
         self.assertIn("gpu_model", m.get_stats())
 
+    def test_server_identity_returns_host_and_ip(self):
+        from backend.miner import server_identity
+        ident = server_identity()
+        self.assertIsInstance(ident["server_hostname"], str)
+        self.assertIsInstance(ident["server_ip"], str)
+        self.assertTrue(ident["server_hostname"])  # every OS reports a hostname
+
+    def test_stats_include_server_identity(self):
+        s = DogeMiner().get_stats()
+        self.assertIn("server_hostname", s)
+        self.assertIn("server_ip", s)
+
     def test_suggest_difficulty_formatter(self):
         m = DogeMiner()
         msg = m._format_suggest_difficulty(64.0)
