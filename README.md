@@ -115,6 +115,14 @@ npm i tailwindcss @tailwindcss/cli
 npx @tailwindcss/cli -i input.css -o frontend/tailwind.css --minify
 ```
 
+Icons and the link-preview card (`frontend/og.png`, `apple-touch-icon.png`, `icon-192/512.png`, `favicon.ico`) are generated from the site's own CSS, so they never drift from the hero. Regenerate after a brand change:
+
+```bash
+python scripts/make_brand_assets.py frontend
+```
+
+That needs `playwright` (plus `playwright install chromium`) and `Pillow` — build-time only, not miner dependencies. The same command run against a `gh-pages` checkout refreshes the assets for doge-miner.io.
+
 ## 🔍 Transparency
 
 - Share counters are driven exclusively by real pool responses.

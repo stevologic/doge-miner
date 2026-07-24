@@ -4,8 +4,34 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DOGE MINER • full-stack real miner • CPU + GPU</title>
+  <meta name="description" content="Live dashboard for the DOGE MINER full-stack Dogecoin pool miner: real Scrypt work on CPU or GPU, share and hashrate telemetry, and blockchain stats.">
+  <meta name="theme-color" content="#0a0a0f">
   <!-- Inline SVG favicon (gold Ð coin) — matches the project site, no extra request, works offline -->
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='55' r='40' fill='%23f0b90b'/%3E%3Ctext x='50' y='72' font-size='52' text-anchor='middle' fill='%230a0a0f' font-family='monospace' font-weight='bold'%3E%C3%90%3C/text%3E%3C/svg%3E">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png">
+  <link rel="alternate icon" href="/favicon.ico" sizes="16x16 32x32 48x48">
+  <!-- iOS home screen. Safari will not take an SVG or a data: URI here — it needs
+       a real PNG — so this file is what puts the coin on the home screen instead
+       of a blurry screenshot. Handy because the README points every device on the
+       LAN at this dashboard via http://doge.local. -->
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-title" content="Doge Miner">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="/site.webmanifest">
+  <!-- Link preview. Served from the miner itself, so it still works offline and
+       on a LAN address; no external host involved. -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="DOGE MINER">
+  <meta property="og:title" content="DOGE MINER — live mining dashboard">
+  <meta property="og:description" content="Real Scrypt proof-of-work on your CPU or GPU, pools that need no registration, live blockchain telemetry with no API keys.">
+  <meta property="og:image" content="/static/og.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="DOGE MINER — much wow, real Dogecoin mining. Open-source pool miner with a live dashboard.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="/static/og.png">
   <!-- Compiled locally with Tailwind v4 CLI (see README) — no runtime CDN compile,
        no external dependency, works offline. Rebuild: npx @tailwindcss/cli. -->
   <link rel="stylesheet" href="/static/tailwind.css">

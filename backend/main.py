@@ -116,6 +116,24 @@ async def retract_local_dns():
 async def serve_frontend():
     return FileResponse(FRONTEND_INDEX)
 
+# Browsers, iOS and link crawlers ask for these at the site root rather than
+# under /static, and the manifest needs its own media type (mimetypes does not
+# know .webmanifest, so StaticFiles would hand it back as text/plain).
+@app.get("/favicon.ico", include_in_schema=False)
+async def serve_favicon():
+    return FileResponse(os.path.join(FRONTEND_DIR, "favicon.ico"), media_type="image/x-icon")
+
+@app.get("/apple-touch-icon.png", include_in_schema=False)
+async def serve_apple_touch_icon():
+    return FileResponse(os.path.join(FRONTEND_DIR, "apple-touch-icon.png"), media_type="image/png")
+
+@app.get("/site.webmanifest", include_in_schema=False)
+async def serve_webmanifest():
+    return FileResponse(
+        os.path.join(FRONTEND_DIR, "site.webmanifest"),
+        media_type="application/manifest+json",
+    )
+
 @app.post("/api/start")
 async def start_mining(req: StartRequest):
     if not is_valid_doge_wallet(req.wallet):
